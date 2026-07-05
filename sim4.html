@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Live Trigonometric Ratio Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--bg:#050510;--panel:rgba(5,5,20,.9);--border:rgba(0,240,255,.3);--hyp:#00f0ff;--opp:#ff00ff;--adj:#ffaa00;--ang:#00ff88;--text:#dde4ff}
+    body{background:var(--bg);font-family:'Segoe UI',sans-serif;overflow:hidden;color:var(--text);touch-action:none}
+    canvas{display:block;position:absolute;top:0;left:0}
+    #badge{position:absolute;top:15px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:6px 18px;font-size:clamp(.7rem,2.5vw,.95rem);letter-spacing:1.5px;color:#00f0ff;text-shadow:0 0 8px rgba(0,240,255,.5);backdrop-filter:blur(10px);pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,240,255,.15);z-index:10}
+    #ui{position:absolute;right:22px;top:50%;transform:translateY(-50%);background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:18px 16px;backdrop-filter:blur(14px);box-shadow:0 0 25px rgba(0,240,255,.15);min-width:210px;display:flex;flex-direction:column;gap:10px;z-index:10}
+    #ui h2{font-size:.62rem;letter-spacing:1.5px;text-transform:uppercase;color:#00f0ff;text-align:center;margin-bottom:2px}
+    .rrow{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03)}
+    .rname{font-size:.78rem;min-width:56px}
+    .rval{font-size:.95rem;font-weight:700;min-width:62px;text-align:right;font-variant-numeric:tabular-nums}
+    .rfrac{font-size:.68rem;color:#667788;min-width:60px;text-align:right}
+    .div{width:100%;height:1px;background:var(--border)}
+    #angDisplay{text-align:center;font-size:1.5rem;font-weight:800;color:#00ff88;text-shadow:0 0 12px rgba(0,255,136,.5);letter-spacing:2px}
+    #hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-size:clamp(.6rem,1.8vw,.75rem);color:#556688;pointer-events:none;background:rgba(5,5,15,.6);padding:4px 12px;border-radius:8px;z-index:10}
+    .katex{font-size:.75rem}
+  </style>
+</head>
+<body>
+  <div id="badge">All 6 Trigonometric Ratios — Live Dashboard</div>
+  <canvas id="c"></canvas>
+  <div id="ui">
+    <h2>Trig Ratios</h2>
+    <div id="angDisplay">45.0°</div>
+    <div class="div"></div>
+    <div class="rrow"><span class="rname" style="color:#ff00ff">sin A</span><span class="rfrac" id="fsin"></span><span class="rval" style="color:#ff00ff" id="vsin">0.707</span></div>
+    <div class="rrow"><span class="rname" style="color:#00f0ff">cos A</span><span class="rfrac" id="fcos"></span><span class="rval" style="color:#00f0ff" id="vcos">0.707</span></div>
+    <div class="rrow"><span class="rname" style="color:#ffaa00">tan A</span><span class="rfrac" id="ftan"></span><span class="rval" style="color:#ffaa00" id="vtan">1.000</span></div>
+    <div class="div"></div>
+    <div class="rrow"><span class="rname" style="color:#ff88cc">cosec A</span><span class="rfrac" id="fcsc"></span><span class="rval" style="color:#ff88cc" id="vcsc">1.414</span></div>
+    <div class="rrow"><span class="rname" style="color:#88ddff">sec A</span><span class="rfrac" id="fsec"></span><span class="rval" style="color:#88ddff" id="vsec">1.414</span></div>
+    <div class="rrow"><span class="rname" style="color:#ffcc55">cot A</span><span class="rfrac" id="fcot"></span><span class="rval" style="color:#ffcc55" id="vcot">1.000</span></div>
+    <div class="div"></div>
+    <div style="font-size:.65rem;color:#556688;text-align:center;line-height:1.6">
+      Drag the <span style="color:#00ff88">green vertex</span><br>to change angle A
+    </div>
+  </div>
+  <div id="hint">Drag the green ● vertex to explore all 6 trig ratios live</div>
+
+  <script>
+    const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+    let W,H;
+    function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
+    resize(); window.addEventListener('resize',()=>{resize();});
+
+    // Triangle: A=bottom-left (the angle), B=bottom-right (right angle), C=top-right (draggable)
+    // We fix A and B, let user drag C vertically to change angle at A
+    let angleA=45; // degrees
+    let dragging=false;
+
+    function getPoints(){
+      const cx=W*0.38, cy=H*0.5;
+      const baseLen=Math.min(W*0.28,260);
+      const A={x:cx-baseLen/2, y:cy+baseLen*0.5};
+      const B={x:cx+baseLen/2, y:cy+baseLen*0.5};
+      const rad=angleA*Math.PI/180;
+      const h=baseLen*Math.tan(rad);
+      const C={x:cx+baseLen/2, y:cy+baseLen*0.5-h};
+      return {A,B,C};
+    }
+
+    function getAngleFromDrag(cy2){
+      const {A,B}=getPoints();
+      const baseLen=B.x-A.x;
+      const h=Math.max(10, B.y-cy2);
+      return Math.min(85, Math.max(5, Math.atan(h/baseLen)*180/Math.PI));
+    }
+
+    canvas.addEventListener('pointerdown',e=>{
+      const {C}=getPoints();
+      const dx=e.clientX-C.x, dy=e.clientY-C.y;
+      if(Math.sqrt(dx*dx+dy*dy)<22){dragging=true;canvas.setPointerCapture(e.pointerId)}
+    });
+    canvas.addEventListener('pointermove',e=>{
+      if(!dragging)return;
+      angleA=getAngleFromDrag(e.clientY);
+    });
+    canvas.addEventListener('pointerup',()=>dragging=false);
+    canvas.addEventListener('pointercancel',()=>dragging=false);
+
+    function rrect(x,y,w,h,r){
+      ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
+      ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);
+      ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);
+      ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);
+      ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+    }
+
+    function label(text,x,y,col,size,align){
+      ctx.font=`${size||13}px Segoe UI`;ctx.fillStyle=col||'#dde4ff';
+      ctx.textAlign=align||'center';ctx.textBaseline='middle';ctx.fillText(text,x,y);
+    }
+
+    function midLabel(p1,p2,text,col,offX,offY){
+      const mx=(p1.x+p2.x)/2+offX, my=(p1.y+p2.y)/2+offY;
+      const tw=ctx.measureText(text).width;
+      ctx.fillStyle='rgba(5,5,20,.8)';rrect(mx-tw/2-6,my-10,tw+12,20,4);ctx.fill();
+      label(text,mx,my,col,13,'center');
+    }
+
+    function fmt(v){
+      if(!isFinite(v)||Math.abs(v)>999)return '∞';
+      return v.toFixed(3);
+    }
+
+    function draw(){
+      ctx.clearRect(0,0,W,H);
+      const {A,B,C}=getPoints();
+
+      const rad=angleA*Math.PI/180;
+      const adj=B.x-A.x;
+      const opp=B.y-C.y;
+      const hyp=Math.sqrt(adj*adj+opp*opp);
+
+      const sinA=opp/hyp, cosA=adj/hyp, tanA=opp/adj;
+      const cscA=1/sinA, secA=1/cosA, cotA=adj/opp;
+
+      // Fill triangle
+      ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.lineTo(C.x,C.y);ctx.closePath();
+      ctx.fillStyle='rgba(0,240,255,.06)';ctx.fill();
+
+      // Hypotenuse AC (cyan)
+      ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(C.x,C.y);
+      ctx.strokeStyle='#00f0ff';ctx.lineWidth=4;ctx.shadowColor='#00f0ff';ctx.shadowBlur=12;ctx.stroke();ctx.shadowBlur=0;
+
+      // Opposite BC (magenta)
+      ctx.beginPath();ctx.moveTo(B.x,B.y);ctx.lineTo(C.x,C.y);
+      ctx.strokeStyle='#ff00ff';ctx.lineWidth=4;ctx.shadowColor='#ff00ff';ctx.shadowBlur=10;ctx.stroke();ctx.shadowBlur=0;
+
+      // Adjacent AB (amber)
+      ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);
+      ctx.strokeStyle='#ffaa00';ctx.lineWidth=4;ctx.shadowColor='#ffaa00';ctx.shadowBlur=10;ctx.stroke();ctx.shadowBlur=0;
+
+      // Right angle at B
+      const sq=14;
+      ctx.beginPath();ctx.moveTo(B.x-sq,B.y);ctx.lineTo(B.x-sq,B.y-sq);ctx.lineTo(B.x,B.y-sq);
+      ctx.strokeStyle='rgba(200,210,255,.5)';ctx.lineWidth=1.5;ctx.stroke();
+
+      // Angle arc at A
+      const arcR=42;
+      ctx.beginPath();ctx.arc(A.x,A.y,arcR,Math.atan2(C.y-A.y,C.x-A.x),0);
+      ctx.strokeStyle='#00ff88';ctx.lineWidth=2.5;ctx.shadowColor='#00ff88';ctx.shadowBlur=8;ctx.stroke();ctx.shadowBlur=0;
+      const midArc=-rad/2;
+      ctx.font='bold 15px Segoe UI';ctx.fillStyle='#00ff88';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(`${angleA.toFixed(1)}°`,A.x+Math.cos(midArc)*(arcR+18),A.y+Math.sin(midArc)*(arcR+18));
+
+      // Side labels
+      ctx.font='bold 13px Segoe UI';
+      midLabel(A,C,'AC = hyp','#00f0ff',-48,0);
+      midLabel(B,C,'BC = opp','#ff00ff',24,0);
+      midLabel(A,B,'AB = adj','#ffaa00',0,18);
+
+      // Vertex labels
+      [[A,'A',-18,0],[B,'B',18,18],[C,'C',18,-18]].forEach(([p,l,dx,dy])=>{
+        ctx.font='bold 16px Segoe UI';ctx.fillStyle='rgba(5,5,20,.8)';
+        ctx.fillRect(p.x+dx-9,p.y+dy-9,18,18);
+        ctx.fillStyle='#dde4ff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(l,p.x+dx,p.y+dy);
+      });
+
+      // Draggable C vertex highlight
+      ctx.beginPath();ctx.arc(C.x,C.y,10,0,Math.PI*2);
+      ctx.fillStyle=dragging?'#00ff88':'rgba(0,255,136,.7)';ctx.shadowColor='#00ff88';ctx.shadowBlur=16;ctx.fill();ctx.shadowBlur=0;
+      ctx.beginPath();ctx.arc(C.x,C.y,10,0,Math.PI*2);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
+
+      // Side dimension callouts
+      const adjPx=adj, oppPx=opp, hypPx=hyp;
+      const scale=adj/adjPx;
+      // Draw measure bars
+      function drawBrace(p1,p2,val,col,offset){
+        const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2;
+        const ang2=Math.atan2(p2.y-p1.y,p2.x-p1.x);
+        const nx=-Math.sin(ang2)*offset, ny=Math.cos(ang2)*offset;
+        ctx.beginPath();ctx.moveTo(p1.x+nx,p1.y+ny);ctx.lineTo(p2.x+nx,p2.y+ny);
+        ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
+        label(val,mx+nx,my+ny,col,11,'center');
+      }
+
+      // Update HTML panel
+      document.getElementById('angDisplay').textContent=`${angleA.toFixed(1)}°`;
+      document.getElementById('vsin').textContent=fmt(sinA);
+      document.getElementById('vcos').textContent=fmt(cosA);
+      document.getElementById('vtan').textContent=fmt(tanA);
+      document.getElementById('vcsc').textContent=fmt(cscA);
+      document.getElementById('vsec').textContent=fmt(secA);
+      document.getElementById('vcot').textContent=fmt(cotA);
+
+      const O=opp.toFixed(1), Hy=hyp.toFixed(1), Ad=adj.toFixed(1);
+      document.getElementById('fsin').textContent=`${O}/${Hy}`;
+      document.getElementById('fcos').textContent=`${Ad}/${Hy}`;
+      document.getElementById('ftan').textContent=`${O}/${Ad}`;
+      document.getElementById('fcsc').textContent=`${Hy}/${O}`;
+      document.getElementById('fsec').textContent=`${Hy}/${Ad}`;
+      document.getElementById('fcot').textContent=`${Ad}/${O}`;
+
+      // Bottom info panel
+      const pX=28,pY=H-150,pW=420,pH=118;
+      ctx.fillStyle='rgba(5,5,20,.88)';ctx.strokeStyle='rgba(0,240,255,.28)';ctx.lineWidth=1;
+      rrect(pX,pY,pW,pH,12);ctx.fill();ctx.stroke();
+      ctx.textAlign='left';ctx.textBaseline='middle';
+      const rows=[
+        {l:'sin A = opp / hyp =',v:fmt(sinA),c:'#ff00ff'},
+        {l:'cos A = adj / hyp =',v:fmt(cosA),c:'#00f0ff'},
+        {l:'tan A = opp / adj =',v:fmt(tanA),c:'#ffaa00'},
+      ];
+      rows.forEach((r,i)=>{
+        ctx.font='13px Segoe UI';ctx.fillStyle='#ccd4ee';ctx.fillText(r.l,pX+14,pY+22+i*32);
+        ctx.font='bold 14px Segoe UI';ctx.fillStyle=r.c;ctx.fillText(r.v,pX+195,pY+22+i*32);
+        if(i===0)ctx.fillText(`  cosec A = ${fmt(cscA)}`,pX+230,pY+22+i*32);
+        if(i===1)ctx.fillText(`  sec A = ${fmt(secA)}`,pX+230,pY+22+i*32);
+        if(i===2)ctx.fillText(`  cot A = ${fmt(cotA)}`,pX+230,pY+22+i*32);
+      });
+    }
+
+    function animate(){requestAnimationFrame(animate);draw()}
+    animate();
+  </script>
+</body>
+</html>

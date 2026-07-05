@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Naming Sides in a Right Triangle</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--bg:#050510;--panel:rgba(5,5,20,.9);--border:rgba(0,240,255,.3);--hyp:#00f0ff;--opp:#ff00ff;--adj:#ffaa00;--ang:#00ff88;--text:#dde4ff}
+    body{background:var(--bg);font-family:'Segoe UI',sans-serif;overflow:hidden;color:var(--text);touch-action:none}
+    canvas{display:block}
+    #badge{position:absolute;top:15px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:6px 18px;font-size:clamp(.7rem,2.5vw,.95rem);letter-spacing:1.5px;color:#00f0ff;text-shadow:0 0 8px rgba(0,240,255,.5);backdrop-filter:blur(10px);pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,240,255,.15)}
+    #ui{position:absolute;right:25px;top:50%;transform:translateY(-50%);background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:22px 16px;backdrop-filter:blur(14px);box-shadow:0 0 25px rgba(0,240,255,.15);display:flex;flex-direction:column;align-items:center;gap:14px;min-width:170px}
+    #ui h2{font-size:.62rem;letter-spacing:1.5px;text-transform:uppercase;color:#00f0ff;text-align:center}
+    .angle-btn{width:136px;padding:11px 0;border-radius:10px;border:1px solid rgba(0,240,255,.3);background:rgba(0,240,255,.07);color:var(--text);font-size:.9rem;font-weight:700;cursor:pointer;letter-spacing:1px;transition:all .25s;text-align:center}
+    .angle-btn:hover{background:rgba(0,240,255,.18);border-color:#00f0ff}
+    .angle-btn.active{background:rgba(0,240,255,.22);border-color:#00f0ff;color:#00f0ff;box-shadow:0 0 14px rgba(0,240,255,.4)}
+    .div{width:100%;height:1px;background:var(--border)}
+    .row{display:flex;align-items:center;gap:8px;width:100%}
+    .dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+    .rl{color:#8899bb;font-size:.73rem;flex:1}
+    #defs{font-size:.68rem;color:#556688;text-align:center;line-height:1.8}
+    #defs span{font-weight:bold}
+    #hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-size:clamp(.6rem,1.8vw,.75rem);color:#556688;pointer-events:none;background:rgba(5,5,15,.6);padding:4px 12px;border-radius:8px}
+  </style>
+</head>
+<body>
+  <div id="badge">📐 Naming the Sides of a Right Triangle</div>
+  <canvas id="c"></canvas>
+  <div id="ui">
+    <h2>Select Angle</h2>
+    <button class="angle-btn active" id="btnA" onclick="sel('A')">∠ A</button>
+    <button class="angle-btn"        id="btnC" onclick="sel('C')">∠ C</button>
+    <div class="div"></div>
+    <div class="row"><div class="dot" style="background:#00f0ff;box-shadow:0 0 7px #00f0ff"></div><span class="rl">Hypotenuse</span></div>
+    <div class="row"><div class="dot" style="background:#ff00ff;box-shadow:0 0 7px #ff00ff"></div><span class="rl">Opposite</span></div>
+    <div class="row"><div class="dot" style="background:#ffaa00;box-shadow:0 0 7px #ffaa00"></div><span class="rl">Adjacent</span></div>
+    <div class="div"></div>
+    <div id="defs">
+      AC = <span style="color:#00f0ff">Hypotenuse</span><br>
+      <span id="d1">BC = <span style="color:#ff00ff">Opposite</span></span><br>
+      <span id="d2">AB = <span style="color:#ffaa00">Adjacent</span></span>
+    </div>
+  </div>
+  <div id="hint">Click ∠A or ∠C to see how labels change</div>
+
+  <script>
+    const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+    let W,H,selA='A',animT=1,prevA='A';
+
+    function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
+    resize(); window.addEventListener('resize',resize);
+
+    function sel(a){
+      if(selA===a)return;
+      prevA=selA; selA=a; animT=0;
+      document.getElementById('btnA').classList.toggle('active',a==='A');
+      document.getElementById('btnC').classList.toggle('active',a==='C');
+      const d1=document.getElementById('d1'), d2=document.getElementById('d2');
+      if(a==='A'){
+        d1.innerHTML='BC = <span style="color:#ff00ff">Opposite</span>';
+        d2.innerHTML='AB = <span style="color:#ffaa00">Adjacent</span>';
+      } else {
+        d1.innerHTML='AB = <span style="color:#ff00ff">Opposite</span>';
+        d2.innerHTML='BC = <span style="color:#ffaa00">Adjacent</span>';
+      }
+    }
+
+    function lerp(a,b,t){return a+(b-a)*t}
+    function ease(t){return t<.5?2*t*t:-1+(4-2*t)*t}
+
+    function hexRgb(h){return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+    function lerpCol(c1,c2,t){
+      const [r1,g1,b1]=hexRgb(c1),[r2,g2,b2]=hexRgb(c2);
+      return `rgb(${~~lerp(r1,r2,t)},${~~lerp(g1,g2,t)},${~~lerp(b1,b2,t)})`;
+    }
+
+    function rrect(x,y,w,h,r){
+      ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+      ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+      ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);
+      ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+    }
+
+    function drawSide(p1,p2,col,lbl,offX,offY){
+      ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
+      ctx.strokeStyle=col;ctx.lineWidth=5;ctx.shadowColor=col;ctx.shadowBlur=14;ctx.stroke();ctx.shadowBlur=0;
+      const mx=(p1.x+p2.x)/2+offX, my=(p1.y+p2.y)/2+offY;
+      ctx.font='bold 14px Segoe UI';
+      const tw=ctx.measureText(lbl).width;
+      ctx.fillStyle='rgba(5,5,20,.82)';rrect(mx-tw/2-7,my-11,tw+14,22,5);ctx.fill();
+      ctx.fillStyle=col;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(lbl,mx,my);
+    }
+
+    function drawArc(vtx,p1,p2,col,lbl){
+      const r=38;
+      const a1=Math.atan2(p1.y-vtx.y,p1.x-vtx.x);
+      const a2=Math.atan2(p2.y-vtx.y,p2.x-vtx.x);
+      const lo=Math.min(a1,a2), hi=Math.max(a1,a2);
+      ctx.beginPath();ctx.arc(vtx.x,vtx.y,r,lo,hi);
+      ctx.strokeStyle=col;ctx.lineWidth=2.5;ctx.shadowColor=col;ctx.shadowBlur=8;ctx.stroke();ctx.shadowBlur=0;
+      const mid=(lo+hi)/2;
+      ctx.font='bold 16px Segoe UI';ctx.fillStyle=col;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(lbl,vtx.x+Math.cos(mid)*(r+16),vtx.y+Math.sin(mid)*(r+16));
+    }
+
+    function drawVLabel(pt,lbl,dx,dy){
+      ctx.font='bold 17px Segoe UI';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(5,5,20,.8)';ctx.fillRect(pt.x+dx-10,pt.y+dy-10,20,20);
+      ctx.fillStyle='#dde4ff';ctx.fillText(lbl,pt.x+dx,pt.y+dy);
+    }
+
+    function draw(t){
+      ctx.clearRect(0,0,W,H);
+
+      const cx=W*0.40, cy=H*0.50;
+      const tw=Math.min(W*0.36,320), th=Math.min(H*0.44,280);
+
+      const A={x:cx-tw/2, y:cy+th/2};
+      const B={x:cx+tw/2, y:cy+th/2};
+      const C={x:cx+tw/2, y:cy-th/2};
+
+      const eT=ease(Math.min(t,1));
+
+      const cmap={
+        A:{AC:'#00f0ff',BC:'#ff00ff',AB:'#ffaa00'},
+        C:{AC:'#00f0ff',AB:'#ff00ff',BC:'#ffaa00'}
+      };
+      const curr=cmap[selA], prev=cmap[prevA];
+      const colAC=lerpCol(prev.AC,curr.AC,eT);
+      const colBC=lerpCol(prev.BC,curr.BC,eT);
+      const colAB=lerpCol(prev.AB,curr.AB,eT);
+
+      // Right angle marker at B
+      const sq=16;
+      ctx.beginPath();ctx.moveTo(B.x-sq,B.y);ctx.lineTo(B.x-sq,B.y-sq);ctx.lineTo(B.x,B.y-sq);
+      ctx.strokeStyle='rgba(200,210,255,.55)';ctx.lineWidth=2;ctx.stroke();
+      ctx.font='11px Segoe UI';ctx.fillStyle='rgba(200,210,255,.5)';ctx.textAlign='center';
+      ctx.fillText('90°',B.x-sq*1.6,B.y-sq*1.6);
+
+      // Sides
+      drawSide(A,C,colAC,'AC (Hypotenuse)',-72,0);
+      drawSide(B,C,colBC,'BC',22,0);
+      drawSide(A,B,colAB,'AB',0,20);
+
+      // Angle arc at selected vertex
+      if(selA==='A') drawArc(A,B,C,'#00ff88','A');
+      else           drawArc(C,A,B,'#00ff88','C');
+
+      // Vertex labels
+      drawVLabel(A,'A',-20,0);
+      drawVLabel(B,'B', 20,20);
+      drawVLabel(C,'C', 20,-20);
+
+      // Floating side-name tags with glow
+      const tags=selA==='A'
+        ?[{col:'#00f0ff',lbl:'Hypotenuse',px:(A.x+C.x)/2-90,py:(A.y+C.y)/2-14},
+          {col:'#ff00ff',lbl:'Opposite',  px:(B.x+C.x)/2+14,py:(B.y+C.y)/2-14},
+          {col:'#ffaa00',lbl:'Adjacent',  px:(A.x+B.x)/2-8, py:(A.y+B.y)/2+32}]
+        :[{col:'#00f0ff',lbl:'Hypotenuse',px:(A.x+C.x)/2-90,py:(A.y+C.y)/2-14},
+          {col:'#ff00ff',lbl:'Opposite',  px:(A.x+B.x)/2-8, py:(A.y+B.y)/2+32},
+          {col:'#ffaa00',lbl:'Adjacent',  px:(B.x+C.x)/2+14,py:(B.y+C.y)/2-14}];
+
+      tags.forEach(tg=>{
+        ctx.font='bold 13px Segoe UI';
+        const tw2=ctx.measureText(tg.lbl).width;
+        ctx.fillStyle='rgba(5,5,20,.78)';rrect(tg.px-6,tg.py-9,tw2+12,20,5);ctx.fill();
+        ctx.fillStyle=tg.col;ctx.shadowColor=tg.col;ctx.shadowBlur=6;
+        ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(tg.lbl,tg.px,tg.py);
+        ctx.shadowBlur=0;
+      });
+
+      // Definition panel bottom-left
+      const pX=28,pY=H-165,pW=310,pH=135;
+      ctx.fillStyle='rgba(5,5,20,.88)';ctx.strokeStyle='rgba(0,240,255,.28)';ctx.lineWidth=1;
+      rrect(pX,pY,pW,pH,13);ctx.fill();ctx.stroke();
+
+      const dlines=selA==='A'
+        ?[{col:'#00f0ff',t:'AC — Hypotenuse (longest side, opposite 90°)'},
+          {col:'#ff00ff',t:'BC — Opposite side of ∠A'},
+          {col:'#ffaa00',t:'AB — Adjacent side of ∠A (next to ∠A)'}]
+        :[{col:'#00f0ff',t:'AC — Hypotenuse (longest side, opposite 90°)'},
+          {col:'#ff00ff',t:'AB — Opposite side of ∠C'},
+          {col:'#ffaa00',t:'BC — Adjacent side of ∠C (next to ∠C)'}];
+
+      ctx.textAlign='left';ctx.textBaseline='middle';
+      dlines.forEach((d,i)=>{
+        ctx.fillStyle=d.col;ctx.shadowColor=d.col;ctx.shadowBlur=4;
+        ctx.font='bold 14px Segoe UI';ctx.fillText('●',pX+14,pY+26+i*37);ctx.shadowBlur=0;
+        ctx.fillStyle='#ccd4ee';ctx.font='13px Segoe UI';ctx.fillText(d.t,pX+32,pY+26+i*37);
+      });
+    }
+
+    let last=0;
+    function animate(ts){
+      requestAnimationFrame(animate);
+      const dt=(ts-last)/1000;last=ts;
+      if(animT<1) animT=Math.min(animT+dt*3,1);
+      draw(animT);
+    }
+    animate(0);
+  </script>
+</body>
+</html>

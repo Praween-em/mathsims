@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <title>Ladder Trigonometry Simulation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #050510;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+            color: #dde4ff;
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+
+        /* ── Top badge ── */
+        #badge {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(5, 5, 20, 0.85);
+            border: 1px solid rgba(0, 240, 255, 0.35);
+            border-radius: 12px;
+            padding: 6px 18px;
+            font-size: clamp(0.7rem, 2.5vw, 0.95rem);
+            letter-spacing: 1.5px;
+            color: #00f0ff;
+            text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+            backdrop-filter: blur(10px);
+            pointer-events: none;
+            white-space: nowrap;
+            box-shadow: 0 4px 20px rgba(0, 240, 255, 0.15);
+        }
+
+        /* ── Right control panel ── */
+        #ui {
+            position: absolute;
+            right: 25px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(5, 5, 20, 0.9);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 20px;
+            padding: 24px 16px;
+            backdrop-filter: blur(14px);
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            width: 75px;
+        }
+
+        #ui h2 {
+            font-size: 0.62rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #00f0ff;
+            writing-mode: vertical-lr;
+            text-align: center;
+        }
+
+        .slider-container {
+            height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            width: 200px;
+            height: 6px;
+            border-radius: 3px;
+            background: #151530;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            outline: none;
+            transform: rotate(-90deg);
+            cursor: pointer;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #00f0ff;
+            box-shadow: 0 0 10px #00f0ffcc;
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+
+        .label {
+            font-size: 0.72rem;
+            color: #8899bb;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        #hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: clamp(0.6rem, 1.8vw, 0.75rem);
+            color: #556688;
+            pointer-events: none;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+            background: rgba(5, 5, 15, 0.6);
+            padding: 4px 12px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="badge">📐 Ladder &amp; Wall — Trigonometry</div>
+
+    <div id="angle-val-label"
+        style="position: absolute; color: #ff00ff; font-family: 'Segoe UI', monospace; font-size: 0.9rem; font-weight: bold; pointer-events: none; transform: translate(-50%, -100%); background: rgba(5, 5, 20, 0.85); border: 1px solid #ff00ff; padding: 4px 8px; border-radius: 6px; box-shadow: 0 0 10px rgba(255, 0, 255, 0.3); text-shadow: 0 0 5px rgba(255, 0, 255, 0.8); z-index: 10;">
+        0.0°</div>
+
+    <div id="ui">
+        <div class="label" style="color: #ffaa00;">Resting</div>
+        <div class="slider-container">
+            <!-- Value 10 to 80. Initially 10 (Fallen / Flat on ground) -->
+            <input type="range" id="slider" class="slider" min="10" max="80" value="10" step="0.5">
+        </div>
+        <div class="label" style="color: #ff5588;">Fallen</div>
+    </div>
+
+    <div id="hint">Drag anywhere to Rotate View · Scroll / Pinch to Zoom</div>
+
+    <!-- Reliable local or fallback CDN link for three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ── SCENE / CAMERA / RENDERER ─────────────────────────────────────────────
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050510);
+
+        const W = window.innerWidth, H = window.innerHeight;
+        const camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 1000);
+
+        // Renderer setup with high compatibility settings
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(W, H);
+        document.body.appendChild(renderer.domElement);
+
+        // ── CUSTOM CAMERA ORBIT CONTROLS (100% RELIABLE) ──────────────────────────
+        let theta = 0.6; // horizontal angle
+        let phi = 0.4;   // vertical angle
+        let radius = 16;  // zoom distance
+
+        function updateCameraPosition() {
+            phi = Math.max(0.05, Math.min(Math.PI / 2.1, phi)); // clamp vertical
+            camera.position.x = radius * Math.cos(phi) * Math.sin(theta);
+            camera.position.y = radius * Math.sin(phi) + 3;
+            camera.position.z = radius * Math.cos(phi) * Math.cos(theta);
+            camera.lookAt(0, 3.5, 0);
+        }
+        updateCameraPosition();
+
+        // Pointer drag event handlers
+        let isDragging = false;
+        let previousPointerPosition = { x: 0, y: 0 };
+
+        document.addEventListener('pointerdown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            isDragging = true;
+            previousPointerPosition = { x: e.clientX, y: e.clientY };
+        });
+
+        document.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+            const deltaX = e.clientX - previousPointerPosition.x;
+            const deltaY = e.clientY - previousPointerPosition.y;
+
+            theta -= deltaX * 0.007;
+            phi += deltaY * 0.007;
+
+            previousPointerPosition = { x: e.clientX, y: e.clientY };
+            updateCameraPosition();
+        });
+
+        document.addEventListener('pointerup', () => { isDragging = false; });
+        document.addEventListener('pointercancel', () => { isDragging = false; });
+
+        // Wheel / Pinch Zoom
+        document.addEventListener('wheel', (e) => {
+            radius += e.deltaY * 0.01;
+            radius = Math.max(6, Math.min(35, radius));
+            updateCameraPosition();
+        }, { passive: true });
+
+        // ── GROUND ───────────────────────────────────────────────────────────────
+        // Clean dark blue ground plane
+        const groundGeo = new THREE.PlaneGeometry(40, 40);
+        const groundMat = new THREE.MeshBasicMaterial({ color: 0x0a0a20 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
+
+        // Bright grid helper for perspective
+        const grid = new THREE.GridHelper(40, 20, 0x00f0ff, 0x151535);
+        grid.position.y = 0.001;
+        scene.add(grid);
+
+        // ── NEON BLUE WALL (at x = 0) ────────────────────────────────────────────
+        const WALL_H = 12, WALL_D = 6;
+
+        // Semi-translucent blueprint wall volume
+        const wallGeo = new THREE.BoxGeometry(0.4, WALL_H, WALL_D);
+        const wallMat = new THREE.MeshBasicMaterial({
+            color: 0xc3b6a6,
+            transparent: false,
+            opacity: 1,
+            side: THREE.DoubleSide
+        });
+        const wall = new THREE.Mesh(wallGeo, wallMat);
+        wall.position.set(-0.1, WALL_H / 2, 0);
+        scene.add(wall);
+
+        // Outline of the wall so it stands out sharply
+        const wallEdges = new THREE.EdgesGeometry(wallGeo);
+        const wallLine = new THREE.LineSegments(
+            wallEdges,
+            new THREE.LineBasicMaterial({ color: 0x00000, linewidth: 100 })
+        );
+        wallLine.position.copy(wall.position);
+        scene.add(wallLine);
+
+        // ── LADDER (Facing user, rails separated along Z axis) ────────────────────
+        const LADDER_LEN = 9.5;
+        const RAIL_R = 0.1;
+        const RAIL_HALF_Z = 0.5;
+        const RUNG_COUNT = 12;
+
+        function createLadder() {
+            const g = new THREE.Group();
+            // Basic material is 100% visible regardless of WebGL lighting support
+            const railMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+            const rungMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+
+            // Two rails
+            [-RAIL_HALF_Z, RAIL_HALF_Z].forEach(zPos => {
+                const rail = new THREE.Mesh(
+                    new THREE.CylinderGeometry(RAIL_R, RAIL_R, LADDER_LEN, 8),
+                    railMat
+                );
+                rail.position.z = zPos;
+                g.add(rail);
+            });
+
+            // Rungs
+            for (let i = 0; i <= RUNG_COUNT; i++) {
+                const yPos = (i / RUNG_COUNT - 0.5) * LADDER_LEN;
+                const rung = new THREE.Mesh(
+                    new THREE.CylinderGeometry(RAIL_R * 0.8, RAIL_R * 0.8, RAIL_HALF_Z * 2, 6),
+                    rungMat
+                );
+                rung.rotation.x = Math.PI / 2;
+                rung.position.y = yPos;
+                g.add(rung);
+            }
+            return g;
+        }
+
+        const ladderGroup = new THREE.Group();
+        const ladderMesh = createLadder();
+        // Offset center so the base/foot is at y=0 local coordinate
+        ladderMesh.position.y = LADDER_LEN / 2;
+        ladderGroup.add(ladderMesh);
+        scene.add(ladderGroup);
+
+        // ── ANGLE ARC (At the foot of the ladder) ──────────────────────────────────
+        const ARC_SEGS = 32, ARC_R = 1.5;
+        const arcGeo = new THREE.BufferGeometry().setFromPoints(
+            Array.from({ length: ARC_SEGS + 1 }, () => new THREE.Vector3())
+        );
+        const arcLine = new THREE.Line(
+            arcGeo,
+            new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 33 })
+        );
+        scene.add(arcLine);
+
+        // Midpoint angle text indicator (Sphere marker)
+        const arcDot = new THREE.Mesh(
+            new THREE.SphereGeometry(0.1, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0xff00ff })
+        );
+        scene.add(arcDot);
+
+        // ── SLIDER & SCENE UPDATE LOGIC ──────────────────────────────────────────
+        const slider = document.getElementById('slider');
+        const angleValLabel = document.getElementById('angle-val-label');
+        const tempV = new THREE.Vector3();
+
+        function updateScene() {
+            // Slider goes from 10 to 80.
+            // Initially, slider = 10 (Fallen / Flat on ground)
+            // Sliding UP (towards 80) moves the ladder UP against the wall
+            const deg = Number(slider.value);
+            const rad = (deg * Math.PI / 180);
+
+            // L·cos(θ) = distance from foot of ladder to wall
+            const footX = -(LADDER_LEN * Math.cos(rad));
+            const topY = LADDER_LEN * Math.sin(rad);
+
+            // Position ladder group foot on the ground
+            ladderGroup.position.set(footX, 0, 0);
+
+            // Tilt ladder towards wall
+            ladderGroup.rotation.z = rad - Math.PI / 2;
+
+            // Update Arc position & points
+            arcLine.position.set(footX, 0.01, 0);
+            const pts = [];
+            for (let i = 0; i <= ARC_SEGS; i++) {
+                const a = (i / ARC_SEGS) * rad;
+                pts.push(new THREE.Vector3(Math.cos(a) * ARC_R, Math.sin(a) * ARC_R, 0));
+            }
+            arcGeo.setFromPoints(pts);
+            arcGeo.attributes.position.needsUpdate = true;
+
+            // Update center indicator dot
+            const mid = rad / 2;
+            arcDot.position.set(
+                footX + Math.cos(mid) * ARC_R * 1.3,
+                Math.sin(mid) * ARC_R * 1.3,
+                0
+            );
+
+            // Update floating 3D angle text
+            if (angleValLabel) {
+                angleValLabel.textContent = `${deg.toFixed(1)}°`;
+            }
+        }
+
+        slider.addEventListener('input', updateScene);
+        updateScene(); // Run once initially
+
+
+
+        function updateLabelPosition() {
+            if (!arcDot || !angleValLabel) return;
+            arcDot.getWorldPosition(tempV);
+            tempV.project(camera);
+
+            if (tempV.z > 1) {
+                angleValLabel.style.display = 'none';
+                return;
+            }
+
+            const x = (tempV.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (tempV.y * -0.5 + 0.5) * window.innerHeight;
+
+            angleValLabel.style.display = 'block';
+            angleValLabel.style.left = `${x}px`;
+            angleValLabel.style.top = `${y}px`;
+        }
+
+        // ── ANIMATION LOOP ────────────────────────────────────────────────────────
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+            updateLabelPosition();
+        }
+        animate();
+
+        // ── WINDOW RESIZE ─────────────────────────────────────────────────────────
+        window.addEventListener('resize', () => {
+            const w = window.innerWidth, h = window.innerHeight;
+            renderer.setSize(w, h);
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+        });
+    </script>
+</body>
+
+</html>

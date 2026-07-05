@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trigonometric Identities — Visual Proof</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--bg:#050510;--panel:rgba(5,5,20,.9);--border:rgba(0,240,255,.3);--hyp:#00f0ff;--opp:#ff00ff;--adj:#ffaa00;--ang:#00ff88;--text:#dde4ff}
+    body{background:var(--bg);font-family:'Segoe UI',sans-serif;overflow:hidden;color:var(--text);touch-action:none}
+    canvas{display:block;position:absolute;top:0;left:0}
+    #badge{position:absolute;top:15px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:6px 18px;font-size:clamp(.7rem,2.5vw,.95rem);letter-spacing:1.5px;color:#00f0ff;text-shadow:0 0 8px rgba(0,240,255,.5);backdrop-filter:blur(10px);pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,240,255,.15);z-index:10}
+    #ui{position:absolute;right:22px;top:50%;transform:translateY(-50%);background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:22px 16px;backdrop-filter:blur(14px);box-shadow:0 0 25px rgba(0,240,255,.15);min-width:215px;display:flex;flex-direction:column;gap:12px;align-items:center;z-index:10}
+    #ui h2{font-size:.62rem;letter-spacing:1.5px;text-transform:uppercase;color:#00f0ff;text-align:center}
+    #angDisp{font-size:1.7rem;font-weight:800;color:#00ff88;text-shadow:0 0 14px rgba(0,255,136,.5);letter-spacing:2px}
+    .slider-wrap{height:200px;display:flex;align-items:center;justify-content:center;width:28px}
+    .vslider{-webkit-appearance:none;width:180px;height:6px;border-radius:3px;background:#151530;border:1px solid rgba(0,240,255,.2);outline:none;transform:rotate(-90deg);cursor:pointer}
+    .vslider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#00ff88;box-shadow:0 0 10px #00ff88cc;cursor:pointer;border:2px solid #fff}
+    .div{width:100%;height:1px;background:var(--border)}
+    .id-box{padding:10px 12px;border-radius:10px;border:1px solid rgba(0,240,255,.2);background:rgba(0,240,255,.05);width:100%}
+    .id-title{font-size:.65rem;color:#00f0ff;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+    .id-eq{font-size:.82rem;font-weight:600;line-height:1.7}
+    .id-val{font-size:.78rem;color:#8899bb;margin-top:3px}
+    .tab-row{display:flex;gap:6px;width:100%}
+    .tab-btn{flex:1;padding:8px 0;border-radius:8px;border:1px solid rgba(0,240,255,.25);background:rgba(0,240,255,.06);color:#8899bb;font-size:.72rem;cursor:pointer;transition:all .2s;text-align:center}
+    .tab-btn:hover{background:rgba(0,240,255,.14)}
+    .tab-btn.active{background:rgba(0,240,255,.2);border-color:#00f0ff;color:#00f0ff}
+    #hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-size:clamp(.6rem,1.8vw,.75rem);color:#556688;pointer-events:none;background:rgba(5,5,15,.6);padding:4px 12px;border-radius:8px;z-index:10}
+  </style>
+</head>
+<body>
+  <div id="badge">Trigonometric Identities — sin²A + cos²A = 1 (Visual Proof)</div>
+  <canvas id="c"></canvas>
+  <div id="ui">
+    <h2>Angle A</h2>
+    <div id="angDisp">45°</div>
+    <div class="slider-wrap">
+      <input type="range" class="vslider" id="slider" min="5" max="85" value="45" step="0.5">
+    </div>
+    <div class="div"></div>
+    <div class="tab-row">
+      <button class="tab-btn active" id="tab1" onclick="setTab(1)">sin²+cos²</button>
+      <button class="tab-btn" id="tab2" onclick="setTab(2)">tan²+1</button>
+      <button class="tab-btn" id="tab3" onclick="setTab(3)">cot²+1</button>
+    </div>
+    <div class="div"></div>
+    <div class="id-box">
+      <div class="id-title">Identity 1</div>
+      <div class="id-eq">sin²A + cos²A = <strong style="color:#00ff88">1</strong></div>
+      <div class="id-val" id="id1val">0.500 + 0.500 = 1.000</div>
+    </div>
+    <div class="id-box">
+      <div class="id-title">Identity 2</div>
+      <div class="id-eq">1 + tan²A = <strong style="color:#00ff88">sec²A</strong></div>
+      <div class="id-val" id="id2val">1 + 1.000 = 2.000</div>
+    </div>
+    <div class="id-box">
+      <div class="id-title">Identity 3</div>
+      <div class="id-eq">cot²A + 1 = <strong style="color:#00ff88">cosec²A</strong></div>
+      <div class="id-val" id="id3val">1.000 + 1 = 2.000</div>
+    </div>
+  </div>
+  <div id="hint">Drag the slider — the colored squares always sum to the white square</div>
+
+  <script>
+    const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+    let W,H; function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
+    resize(); window.addEventListener('resize',resize);
+
+    const slider=document.getElementById('slider');
+    let ang=45, activeTab=1;
+    slider.addEventListener('input',()=>{ang=Number(slider.value)});
+
+    function setTab(t){
+      activeTab=t;
+      ['tab1','tab2','tab3'].forEach((id,i)=>document.getElementById(id).classList.toggle('active',i+1===t));
+    }
+
+    function rrect(x,y,w,h,r){
+      ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
+      ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);
+      ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);
+      ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);
+      ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+    }
+
+    function textBox(text,x,y,col,sz){
+      ctx.font=`bold ${sz||13}px Segoe UI`;const tw=ctx.measureText(text).width;
+      ctx.fillStyle='rgba(5,5,20,.85)';rrect(x-tw/2-7,y-10,tw+14,20,4);ctx.fill();
+      ctx.fillStyle=col||'#dde4ff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x,y);
+    }
+
+    function drawSq(x,y,side,col,label,alpha){
+      ctx.globalAlpha=alpha||1;
+      ctx.fillStyle=col.replace(')',`, 0.18)`).replace('rgb','rgba').replace('#','').length===6
+        ? col+'28' : col;
+      // Simple fill with slight transparency
+      ctx.fillStyle=col;ctx.globalAlpha=(alpha||1)*0.22;
+      rrect(x,y,side,side,4);ctx.fill();
+      ctx.globalAlpha=alpha||1;
+      ctx.strokeStyle=col;ctx.lineWidth=2;ctx.shadowColor=col;ctx.shadowBlur=8;
+      rrect(x,y,side,side,4);ctx.stroke();ctx.shadowBlur=0;
+      ctx.font=`bold ${Math.min(14,side*0.28)}px Segoe UI`;
+      ctx.fillStyle=col;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(label,x+side/2,y+side/2);
+      ctx.globalAlpha=1;
+    }
+
+    function draw(){
+      ctx.clearRect(0,0,W,H);
+
+      const rad=ang*Math.PI/180;
+      const sinA=Math.sin(rad), cosA=Math.cos(rad), tanA=Math.tan(rad);
+      const secA=1/cosA, cscA=1/sinA, cotA=cosA/sinA;
+
+      const r=Math.min(W*0.2,160);
+      const cx=W*0.38, cy=H*0.52;
+
+      // ── Unit circle ──
+      ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
+      ctx.strokeStyle='rgba(0,240,255,.2)';ctx.lineWidth=1.5;ctx.setLineDash([4,6]);ctx.stroke();ctx.setLineDash([]);
+
+      // Triangle inside unit circle
+      const A={x:cx, y:cy};
+      const C={x:cx+r*cosA, y:cy-r*sinA};
+      const B={x:cx+r*cosA, y:cy};
+
+      // Fill
+      ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.lineTo(C.x,C.y);ctx.closePath();
+      ctx.fillStyle='rgba(0,240,255,.05)';ctx.fill();
+
+      // Hypotenuse (radius r = 1 unit)
+      ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(C.x,C.y);
+      ctx.strokeStyle='#00f0ff';ctx.lineWidth=4;ctx.shadowColor='#00f0ff';ctx.shadowBlur=12;ctx.stroke();ctx.shadowBlur=0;
+      // Opposite (sin A)
+      ctx.beginPath();ctx.moveTo(B.x,B.y);ctx.lineTo(C.x,C.y);
+      ctx.strokeStyle='#ff00ff';ctx.lineWidth=4;ctx.shadowColor='#ff00ff';ctx.shadowBlur=10;ctx.stroke();ctx.shadowBlur=0;
+      // Adjacent (cos A)
+      ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);
+      ctx.strokeStyle='#ffaa00';ctx.lineWidth=4;ctx.shadowColor='#ffaa00';ctx.shadowBlur=10;ctx.stroke();ctx.shadowBlur=0;
+
+      // Right angle at B
+      const sq=12;
+      ctx.beginPath();ctx.moveTo(B.x-sq,B.y);ctx.lineTo(B.x-sq,B.y-sq);ctx.lineTo(B.x,B.y-sq);
+      ctx.strokeStyle='rgba(200,210,255,.45)';ctx.lineWidth=1.5;ctx.stroke();
+
+      // Angle arc at A
+      ctx.beginPath();ctx.arc(A.x,A.y,36,-rad,0);
+      ctx.strokeStyle='#00ff88';ctx.lineWidth=2.5;ctx.shadowColor='#00ff88';ctx.shadowBlur=6;ctx.stroke();ctx.shadowBlur=0;
+      textBox(`${ang.toFixed(1)}°`,A.x+56,A.y-10,'#00ff88');
+
+      // Labels on triangle
+      textBox('r=1',(A.x+C.x)/2-26,(A.y+C.y)/2,'#00f0ff');
+      textBox(`sin A = ${sinA.toFixed(3)}`,(B.x+C.x)/2+52,(B.y+C.y)/2,'#ff00ff');
+      textBox(`cos A = ${cosA.toFixed(3)}`,(A.x+B.x)/2,(B.y+18),'#ffaa00');
+
+      // Vertex dot at C
+      ctx.beginPath();ctx.arc(C.x,C.y,5,0,Math.PI*2);
+      ctx.fillStyle='#00ff88';ctx.shadowColor='#00ff88';ctx.shadowBlur=10;ctx.fill();ctx.shadowBlur=0;
+
+      // ── Square area visualisation ──
+      const sqArea=Math.min(W*0.22,165);
+      const sqX=cx-sqArea/2, sqY=cy-sqArea-40;
+
+      // IDENTITY 1: sin²A + cos²A = 1
+      if(activeTab===1){
+        // White square = 1 (total)
+        const S=sqArea; // side = 1 (unit square = hypotenuse²)
+        const sinSide=sinA*S, cosSide=cosA*S;
+
+        textBox('sin²A + cos²A = 1',sqX+S/2,sqY-14,'#dde4ff',12);
+        // Full square outline
+        ctx.strokeStyle='rgba(255,255,255,.25)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+        rrect(sqX,sqY,S,S,4);ctx.stroke();ctx.setLineDash([]);
+        // sin² portion (magenta)
+        drawSq(sqX,sqY+S-sinSide*sinA/1,S*sinA,S*sinA,'#ff00ff',`sin²A\n${(sinA*sinA).toFixed(3)}`);
+        // cos² portion (cyan) — placed adjacent
+        drawSq(sqX+S*sinA,sqY,S*cosA,S*cosA,'#00f0ff',`cos²A\n${(cosA*cosA).toFixed(3)}`);
+
+        // Sum label
+        const sum=sinA*sinA+cosA*cosA;
+        textBox(`${(sinA*sinA).toFixed(3)} + ${(cosA*cosA).toFixed(3)} = ${sum.toFixed(3)}`,sqX+S/2,sqY+S+18,'#00ff88',12);
+      }
+
+      // IDENTITY 2: 1 + tan²A = sec²A
+      if(activeTab===2){
+        const S=Math.min(sqArea, Math.abs(tanA)*sqArea*0.5+30);
+        const base=sqArea*0.45;
+        textBox('1 + tan²A = sec²A',sqX+base*1.2,sqY-14,'#dde4ff',12);
+        const tan2=tanA*tanA, sec2=secA*secA;
+        // sec² = whole
+        const bigS=base*Math.min(secA,3);
+        drawSq(sqX,sqY,bigS,bigS,'#88ddff',`sec²A\n${sec2.toFixed(3)}`);
+        // 1 portion
+        drawSq(sqX+bigS+12,sqY,base,base,'rgba(200,210,255,.8)',`1`);
+        // tan² portion
+        const tanS=base*Math.min(Math.abs(tanA),2.8);
+        drawSq(sqX+bigS+12,sqY+base+8,tanS,tanS,'#ffaa00',`tan²A\n${tan2.toFixed(3)}`);
+        textBox(`1 + ${tan2.toFixed(3)} = ${sec2.toFixed(3)}`,sqX+base*1.2,sqY+bigS+20,'#00ff88',12);
+      }
+
+      // IDENTITY 3: cot²A + 1 = cosec²A
+      if(activeTab===3){
+        const base=sqArea*0.45;
+        textBox('cot²A + 1 = cosec²A',sqX+base*1.2,sqY-14,'#dde4ff',12);
+        const cot2=cotA*cotA, csc2=cscA*cscA;
+        const bigS=base*Math.min(cscA,3);
+        drawSq(sqX,sqY,bigS,bigS,'#ff88cc',`cosec²A\n${csc2.toFixed(3)}`);
+        drawSq(sqX+bigS+12,sqY,base,base,'rgba(200,210,255,.8)','1');
+        const cotS=base*Math.min(cotA,2.8);
+        drawSq(sqX+bigS+12,sqY+base+8,cotS,cotS,'#ffcc55',`cot²A\n${cot2.toFixed(3)}`);
+        textBox(`${cot2.toFixed(3)} + 1 = ${csc2.toFixed(3)}`,sqX+base*1.2,sqY+bigS+20,'#00ff88',12);
+      }
+
+      // ── Derivation panel ──
+      const bX=28, bY=H-180, bW=440, bH=150;
+      ctx.fillStyle='rgba(5,5,20,.88)';ctx.strokeStyle='rgba(0,240,255,.25)';ctx.lineWidth=1;
+      rrect(bX,bY,bW,bH,12);ctx.fill();ctx.stroke();
+
+      ctx.textAlign='left';ctx.textBaseline='middle';
+      const proof=[
+        {c:'#dde4ff',t:'From Pythagoras:  AB² + BC² = AC²'},
+        {c:'#dde4ff',t:'In unit circle (AC = 1):  cos²A + sin²A = 1²  →  sin²A + cos²A = 1'},
+        {c:'#ffaa00',t:'Divide by cos²A:  tan²A + 1 = sec²A         (Identity 2)'},
+        {c:'#ff88cc',t:'Divide by sin²A:  1 + cot²A = cosec²A       (Identity 3)'},
+      ];
+      proof.forEach((p,i)=>{
+        ctx.font=i===0?'13px Segoe UI':'bold 13px Segoe UI';ctx.fillStyle=p.c;
+        ctx.fillText(p.t,bX+14,bY+22+i*32);
+      });
+
+      // Update panel values
+      document.getElementById('angDisp').textContent=`${ang.toFixed(1)}°`;
+      document.getElementById('id1val').textContent=`${(sinA*sinA).toFixed(4)} + ${(cosA*cosA).toFixed(4)} = ${(sinA*sinA+cosA*cosA).toFixed(4)}`;
+      document.getElementById('id2val').textContent=`1 + ${(tanA*tanA).toFixed(3)} = ${(secA*secA).toFixed(3)}`;
+      document.getElementById('id3val').textContent=`${(cotA*cotA).toFixed(3)} + 1 = ${(cscA*cscA).toFixed(3)}`;
+    }
+
+    function animate(){requestAnimationFrame(animate);draw()}
+    animate();
+  </script>
+</body>
+</html>

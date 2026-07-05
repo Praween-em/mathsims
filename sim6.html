@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>30° & 60° Trigonometric Ratios — Equilateral Triangle</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--bg:#050510;--panel:rgba(5,5,20,.9);--border:rgba(0,240,255,.3);--hyp:#00f0ff;--opp:#ff00ff;--adj:#ffaa00;--ang:#00ff88;--text:#dde4ff}
+    body{background:var(--bg);font-family:'Segoe UI',sans-serif;overflow:hidden;color:var(--text);touch-action:none}
+    canvas{display:block;position:absolute;top:0;left:0}
+    #badge{position:absolute;top:15px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:6px 18px;font-size:clamp(.7rem,2.5vw,.95rem);letter-spacing:1.5px;color:#00f0ff;text-shadow:0 0 8px rgba(0,240,255,.5);backdrop-filter:blur(10px);pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,240,255,.15);z-index:10}
+    #ui{position:absolute;right:22px;top:50%;transform:translateY(-50%);background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:22px 16px;backdrop-filter:blur(14px);box-shadow:0 0 25px rgba(0,240,255,.15);min-width:220px;display:flex;flex-direction:column;gap:12px;z-index:10}
+    #ui h2{font-size:.62rem;letter-spacing:1.5px;text-transform:uppercase;color:#00f0ff;text-align:center}
+    .toggle-row{display:flex;gap:8px}
+    .ang-btn{flex:1;padding:11px 0;border-radius:10px;border:1px solid rgba(0,240,255,.3);background:rgba(0,240,255,.07);color:var(--text);font-size:.95rem;font-weight:700;cursor:pointer;transition:all .25s;text-align:center}
+    .ang-btn:hover{background:rgba(0,240,255,.18)}
+    .ang-btn.active{background:rgba(0,240,255,.22);border-color:#00f0ff;color:#00f0ff;box-shadow:0 0 12px rgba(0,240,255,.4)}
+    .div{width:100%;height:1px;background:var(--border)}
+    .rrow{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03)}
+    .rname{font-size:.78rem;min-width:66px}
+    .rval{font-size:.9rem;font-weight:700;min-width:60px;text-align:right}
+    .step-item{padding:9px 12px;border-radius:9px;border:1px solid rgba(255,255,255,.08);font-size:.76rem;line-height:1.5;color:#667788;transition:all .3s}
+    .step-item.active{color:#fff;border-color:#00ff88;background:rgba(0,255,136,.08);box-shadow:0 0 10px rgba(0,255,136,.12)}
+    .step-item.done{color:#ccd4ee;border-color:rgba(0,240,255,.2);background:rgba(0,240,255,.04)}
+    .step-num{font-size:.62rem;color:#00ff88;font-weight:700;letter-spacing:1px;margin-bottom:2px}
+    #nextBtn{padding:11px 0;border-radius:11px;border:1px solid rgba(0,240,255,.4);background:rgba(0,240,255,.12);color:#00f0ff;font-size:.88rem;font-weight:700;cursor:pointer;letter-spacing:.8px;transition:all .25s}
+    #nextBtn:hover{background:rgba(0,240,255,.24);box-shadow:0 0 14px rgba(0,240,255,.3)}
+    #nextBtn:disabled{opacity:.35;cursor:default}
+    #resetBtn{padding:7px 0;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#8899bb;font-size:.76rem;cursor:pointer;transition:all .2s}
+    #resetBtn:hover{border-color:rgba(255,255,255,.28);color:#ccd4ee}
+    #hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-size:clamp(.6rem,1.8vw,.75rem);color:#556688;pointer-events:none;background:rgba(5,5,15,.6);padding:4px 12px;border-radius:8px;z-index:10}
+  </style>
+</head>
+<body>
+  <div id="badge">Trigonometric Ratios of 30° and 60° — Equilateral Triangle</div>
+  <canvas id="c"></canvas>
+  <div id="ui">
+    <h2>View Angle</h2>
+    <div class="toggle-row">
+      <button class="ang-btn active" id="btn30" onclick="setAng(30)">30°</button>
+      <button class="ang-btn" id="btn60" onclick="setAng(60)">60°</button>
+    </div>
+    <div class="div"></div>
+    <div class="step-item active" id="s0"><div class="step-num">STEP 1</div>Start with equilateral △ABC,<br>all sides = 2a, all angles = 60°</div>
+    <div class="step-item" id="s1"><div class="step-num">STEP 2</div>Draw perpendicular AD from A to BC.<br>D is midpoint: BD = DC = a</div>
+    <div class="step-item" id="s2"><div class="step-num">STEP 3</div>By Pythagoras in △ABD:<br>AD² = AB² − BD² = 4a²−a² = 3a²<br><strong style="color:#00f0ff">AD = a√3</strong></div>
+    <div class="step-item" id="s3"><div class="step-num">STEP 4</div>Apply ratios for the selected angle</div>
+    <div class="div"></div>
+    <button id="nextBtn" onclick="nextStep()">Next Step →</button>
+    <button id="resetBtn" onclick="reset()">↺ Restart</button>
+    <div class="div"></div>
+    <div class="rrow"><span class="rname" id="rn1" style="color:#ff00ff">sin 60°</span><span class="rval" id="rv1" style="color:#ff00ff">√3/2</span></div>
+    <div class="rrow"><span class="rname" id="rn2" style="color:#00f0ff">cos 60°</span><span class="rval" id="rv2" style="color:#00f0ff">1/2</span></div>
+    <div class="rrow"><span class="rname" id="rn3" style="color:#ffaa00">tan 60°</span><span class="rval" id="rv3" style="color:#ffaa00">√3</span></div>
+  </div>
+  <div id="hint">Click 30° or 60°, then step through the proof</div>
+
+  <script>
+    const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+    let W,H; function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
+    resize(); window.addEventListener('resize',resize);
+
+    let viewAng=30, step=0;
+    let anim={0:1,1:0,2:0,3:0};
+
+    const ratioData={
+      30:{sin:'1/2 = 0.500',cos:'√3/2 ≈ 0.866',tan:'1/√3 ≈ 0.577'},
+      60:{sin:'√3/2 ≈ 0.866',cos:'1/2 = 0.500',tan:'√3 ≈ 1.732'}
+    };
+
+    function updateRatioPanel(){
+      const d=ratioData[viewAng];
+      document.getElementById('rn1').textContent=`sin ${viewAng}°`;
+      document.getElementById('rn2').textContent=`cos ${viewAng}°`;
+      document.getElementById('rn3').textContent=`tan ${viewAng}°`;
+      document.getElementById('rv1').textContent=d.sin;
+      document.getElementById('rv2').textContent=d.cos;
+      document.getElementById('rv3').textContent=d.tan;
+    }
+
+    function setAng(a){
+      viewAng=a;
+      document.getElementById('btn30').classList.toggle('active',a===30);
+      document.getElementById('btn60').classList.toggle('active',a===60);
+      updateRatioPanel();
+    }
+
+    function nextStep(){
+      if(step>=3){document.getElementById('nextBtn').disabled=true;return}
+      step++;
+      for(let i=0;i<4;i++) document.getElementById('s'+i).className='step-item'+(i===step?' active':i<step?' done':'');
+      if(step===3) document.getElementById('nextBtn').disabled=true;
+    }
+
+    function reset(){
+      step=0;
+      for(let i=0;i<4;i++){anim[i]=0;document.getElementById('s'+i).className='step-item'+(i===0?' active':'')}
+      anim[0]=1;
+      document.getElementById('nextBtn').disabled=false;
+    }
+
+    updateRatioPanel();
+
+    function ease(t){return t<.5?2*t*t:-1+(4-2*t)*t}
+
+    function rrect(x,y,w,h,r){
+      ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
+      ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);
+      ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);
+      ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);
+      ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+    }
+
+    function textBox(t,x,y,col){
+      ctx.font='bold 14px Segoe UI';const tw=ctx.measureText(t).width;
+      ctx.fillStyle='rgba(5,5,20,.82)';rrect(x-tw/2-8,y-11,tw+16,22,5);ctx.fill();
+      ctx.fillStyle=col||'#dde4ff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,x,y);
+    }
+
+    function drawLine(p1,p2,col,lw,bl){
+      ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
+      ctx.strokeStyle=col;ctx.lineWidth=lw||4;ctx.shadowColor=col;ctx.shadowBlur=bl||10;ctx.stroke();ctx.shadowBlur=0;
+    }
+
+    let last=0;
+    function draw(ts){
+      requestAnimationFrame(draw);
+      const dt=(ts-last)/1000;last=ts;
+      for(let i=0;i<=step;i++) if(anim[i]<1) anim[i]=Math.min(anim[i]+dt*2.5,1);
+
+      ctx.clearRect(0,0,W,H);
+      const cx=W*0.38, cy=H*0.5;
+      const a=Math.min(W*0.18,155); // half the equilateral side (side = 2a)
+
+      // Equilateral triangle: B=bottom-left, C=bottom-right, A=top
+      const B={x:cx-a, y:cy+a*Math.sqrt(3)/1.3};
+      const Cp={x:cx+a, y:cy+a*Math.sqrt(3)/1.3};
+      const A2={x:cx,   y:cy+a*Math.sqrt(3)/1.3 - 2*a*Math.sqrt(3)/2};
+      const D={x:cx, y:B.y}; // midpoint of BC (foot of perpendicular)
+
+      const t0=ease(anim[0]);
+
+      // ── Step 0: Equilateral triangle ──
+      if(anim[0]>0){
+        const t=ease(anim[0]);
+        ctx.globalAlpha=t;
+        ctx.beginPath();ctx.moveTo(A2.x,A2.y);ctx.lineTo(B.x,B.y);ctx.lineTo(Cp.x,Cp.y);ctx.closePath();
+        ctx.fillStyle='rgba(0,240,255,.06)';ctx.fill();
+
+        // All sides equal (neutral)
+        const sc='rgba(180,190,220,.65)';
+        drawLine(A2,B,sc,3.5,5);
+        drawLine(A2,Cp,sc,3.5,5);
+        drawLine(B,Cp,sc,3.5,5);
+
+        // Angle labels (60° at each)
+        ctx.font='12px Segoe UI';ctx.fillStyle='#00ff88';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText('60°',A2.x,A2.y+22);
+        ctx.fillText('60°',B.x+28,B.y-10);
+        ctx.fillText('60°',Cp.x-28,Cp.y-10);
+
+        // Side labels
+        textBox('2a',(A2.x+B.x)/2-30,(A2.y+B.y)/2,'rgba(180,190,220,.8)');
+        textBox('2a',(A2.x+Cp.x)/2+30,(A2.y+Cp.y)/2,'rgba(180,190,220,.8)');
+        textBox('2a',(B.x+Cp.x)/2,(B.y+Cp.y)/2+20,'rgba(180,190,220,.8)');
+
+        [[A2,'A',0,-20],[B,'B',-20,14],[Cp,'C',20,14]].forEach(([p,l,dx,dy])=>{
+          ctx.font='bold 17px Segoe UI';ctx.fillStyle='rgba(5,5,20,.8)';ctx.fillRect(p.x+dx-9,p.y+dy-9,18,18);
+          ctx.fillStyle='#dde4ff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(l,p.x+dx,p.y+dy);
+        });
+        ctx.globalAlpha=1;
+      }
+
+      // ── Step 1: Draw perpendicular AD ──
+      if(anim[1]>0){
+        const t=ease(anim[1]);
+        ctx.globalAlpha=t;
+        drawLine(A2,D,'#00ff88',2.5,8);
+        ctx.setLineDash([5,5]);
+        drawLine(D,D,'#00ff88',2,0);
+        ctx.setLineDash([]);
+        // Right angle at D
+        const sq=11;
+        ctx.beginPath();ctx.moveTo(D.x-sq,D.y);ctx.lineTo(D.x-sq,D.y-sq);ctx.lineTo(D.x,D.y-sq);
+        ctx.strokeStyle='rgba(200,210,255,.5)';ctx.lineWidth=1.5;ctx.stroke();
+        textBox('D',D.x,D.y+20,'#dde4ff');
+        // BD = DC = a labels
+        textBox('a',(B.x+D.x)/2,(B.y+D.y)/2+18,'#ffaa00');
+        textBox('a',(D.x+Cp.x)/2,(D.y+Cp.y)/2+18,'#ffaa00');
+        // AD label
+        textBox('AD',(A2.x+D.x)/2+22,(A2.y+D.y)/2,'#00ff88');
+
+        // angle labels update
+        ctx.font='12px Segoe UI';ctx.fillStyle='#00ff88';ctx.textAlign='center';
+        ctx.fillText('30°',B.x+32,B.y-8);
+        ctx.fillText('30°',A2.x-22,A2.y+18);
+        ctx.globalAlpha=1;
+      }
+
+      // ── Step 2: Highlight AD = a√3 ──
+      if(anim[2]>0){
+        const t=ease(anim[2]);
+        ctx.globalAlpha=t;
+        drawLine(A2,D,'#00f0ff',5,14);
+        textBox('a√3',(A2.x+D.x)/2+30,(A2.y+D.y)/2,'#00f0ff');
+
+        // Pythagoras box
+        const px=W*0.08, py=cy-80;
+        ctx.fillStyle='rgba(5,5,20,.88)';ctx.strokeStyle='rgba(0,240,255,.25)';ctx.lineWidth=1;
+        rrect(px,py,220,80,10);ctx.fill();ctx.stroke();
+        ctx.font='13px Segoe UI';ctx.fillStyle='#ccd4ee';ctx.textAlign='left';ctx.textBaseline='middle';
+        ctx.fillText('AD² = AB² − BD²',px+12,py+18);
+        ctx.fillText('= (2a)² − a² = 3a²',px+12,py+40);
+        ctx.font='bold 13px Segoe UI';ctx.fillStyle='#00f0ff';
+        ctx.fillText('∴ AD = a√3',px+12,py+62);
+        ctx.globalAlpha=1;
+      }
+
+      // ── Step 3: Highlight the working right triangle ──
+      if(anim[3]>0){
+        const t=ease(anim[3]);
+        ctx.globalAlpha=t;
+
+        // Working triangle: ABD (for both 30° and 60° perspective)
+        ctx.beginPath();ctx.moveTo(A2.x,A2.y);ctx.lineTo(B.x,B.y);ctx.lineTo(D.x,D.y);ctx.closePath();
+        ctx.fillStyle='rgba(0,255,136,.08)';ctx.fill();
+
+        if(viewAng===60){
+          // Focus angle at B (60°): hyp=AB, opp=AD, adj=BD
+          drawLine(A2,B,'#00f0ff',5,12); // hyp
+          drawLine(A2,D,'#ff00ff',5,12); // opp
+          drawLine(B,D,'#ffaa00',5,12);  // adj
+          textBox('AB = 2a (hyp)',(A2.x+B.x)/2-50,(A2.y+B.y)/2,'#00f0ff');
+          textBox('AD = a√3 (opp)',(A2.x+D.x)/2+44,(A2.y+D.y)/2,'#ff00ff');
+          textBox('BD = a (adj)',(B.x+D.x)/2,(B.y+D.y)/2+20,'#ffaa00');
+        } else {
+          // Focus angle at A (30°): hyp=AB, opp=BD, adj=AD
+          drawLine(A2,B,'#00f0ff',5,12);  // hyp
+          drawLine(B,D,'#ff00ff',5,12);   // opp
+          drawLine(A2,D,'#ffaa00',5,12);  // adj
+          textBox('AB = 2a (hyp)',(A2.x+B.x)/2-50,(A2.y+B.y)/2,'#00f0ff');
+          textBox('BD = a (opp)',(B.x+D.x)/2,(B.y+D.y)/2+20,'#ff00ff');
+          textBox('AD = a√3 (adj)',(A2.x+D.x)/2+46,(A2.y+D.y)/2,'#ffaa00');
+        }
+
+        // Ratios box
+        const bX=W*0.08, bY=H-190, bW=400, bH=158;
+        ctx.fillStyle='rgba(5,5,20,.92)';ctx.strokeStyle='rgba(0,255,136,.3)';ctx.lineWidth=1.5;
+        rrect(bX,bY,bW,bH,14);ctx.fill();ctx.stroke();
+        ctx.textAlign='left';ctx.textBaseline='middle';
+        if(viewAng===60){
+          const lines=[
+            {c:'#ff00ff',t:'sin 60° = opp/hyp = a√3 / 2a = √3/2 ≈ 0.866'},
+            {c:'#00f0ff',t:'cos 60° = adj/hyp = a / 2a   = 1/2  = 0.500'},
+            {c:'#ffaa00',t:'tan 60° = opp/adj = a√3 / a  = √3  ≈ 1.732'},
+            {c:'#88ddff',t:'cosec 60° = 2/√3,   sec 60° = 2,   cot 60° = 1/√3'},
+          ];
+          lines.forEach((l,i)=>{ctx.font='bold 13px Segoe UI';ctx.fillStyle=l.c;ctx.fillText(l.t,bX+14,bY+22+i*34)});
+        } else {
+          const lines=[
+            {c:'#ff00ff',t:'sin 30° = opp/hyp = a / 2a   = 1/2  = 0.500'},
+            {c:'#00f0ff',t:'cos 30° = adj/hyp = a√3 / 2a = √3/2 ≈ 0.866'},
+            {c:'#ffaa00',t:'tan 30° = opp/adj = a / a√3  = 1/√3 ≈ 0.577'},
+            {c:'#88ddff',t:'cosec 30° = 2,   sec 30° = 2/√3,   cot 30° = √3'},
+          ];
+          lines.forEach((l,i)=>{ctx.font='bold 13px Segoe UI';ctx.fillStyle=l.c;ctx.fillText(l.t,bX+14,bY+22+i*34)});
+        }
+        ctx.globalAlpha=1;
+      }
+    }
+
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>

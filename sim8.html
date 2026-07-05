@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Interactive Trig Values Table</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--bg:#050510;--panel:rgba(5,5,20,.9);--border:rgba(0,240,255,.3);--hyp:#00f0ff;--opp:#ff00ff;--adj:#ffaa00;--ang:#00ff88;--text:#dde4ff}
+    body{background:var(--bg);font-family:'Segoe UI',sans-serif;overflow:hidden;color:var(--text)}
+    #badge{position:absolute;top:15px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:6px 18px;font-size:clamp(.7rem,2.5vw,.95rem);letter-spacing:1.5px;color:#00f0ff;text-shadow:0 0 8px rgba(0,240,255,.5);backdrop-filter:blur(10px);pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,240,255,.15);z-index:10}
+    #layout{display:flex;height:100vh;padding:70px 20px 30px;gap:18px}
+    #tableWrap{flex:0 0 auto;display:flex;flex-direction:column;justify-content:center}
+    #detailPane{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:14px;min-width:0;backdrop-filter:blur(14px);box-shadow:0 0 25px rgba(0,240,255,.1)}
+    table{border-collapse:separate;border-spacing:3px}
+    th{background:rgba(0,240,255,.1);border:1px solid rgba(0,240,255,.25);padding:10px 14px;font-size:.8rem;letter-spacing:1px;color:#00f0ff;text-align:center;border-radius:6px;white-space:nowrap}
+    th.row-head{background:rgba(0,240,255,.06);color:#8899bb;font-size:.76rem}
+    td{padding:12px 18px;text-align:center;border-radius:7px;cursor:pointer;font-size:.92rem;font-weight:700;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.025);transition:all .2s;white-space:nowrap;font-variant-numeric:tabular-nums}
+    td:hover{background:rgba(0,240,255,.12);border-color:rgba(0,240,255,.4);transform:scale(1.05)}
+    td.active{background:rgba(0,255,136,.15);border-color:#00ff88;box-shadow:0 0 14px rgba(0,255,136,.25);color:#fff}
+    td.undef{color:#ff4455;background:rgba(255,0,50,.08);border-color:rgba(255,0,50,.25);cursor:help}
+    td.undef:hover{background:rgba(255,0,50,.18)}
+    .ang-row td{color:#00ff88}
+    #detailTitle{font-size:1.1rem;font-weight:700;color:#00ff88;text-shadow:0 0 10px rgba(0,255,136,.4);letter-spacing:.5px}
+    #detailSub{font-size:.8rem;color:#8899bb;line-height:1.7}
+    #detailCanvas{border:1px solid rgba(0,240,255,.2);border-radius:12px;background:rgba(0,0,20,.6);flex:1;min-height:0}
+    #derivation{background:rgba(0,240,255,.05);border:1px solid rgba(0,240,255,.15);border-radius:10px;padding:14px;font-size:.83rem;line-height:1.8;color:#ccd4ee}
+    #derivation strong{color:#00ff88}
+    .hint-cell{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-size:.72rem;color:#556688;pointer-events:none;background:rgba(5,5,15,.6);padding:4px 12px;border-radius:8px}
+  </style>
+</head>
+<body>
+  <div id="badge">Table 11.1 — Trigonometric Values (Click any cell!)</div>
+  <div id="layout">
+    <div id="tableWrap">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th>∠A</th>
+            <th>0°</th><th>30°</th><th>45°</th><th>60°</th><th>90°</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div id="detailPane">
+      <div id="detailTitle">Click any cell to see the derivation</div>
+      <div id="detailSub">Select a value from the table on the left to learn how it is derived geometrically.</div>
+      <canvas id="detailCanvas"></canvas>
+      <div id="derivation">
+        Choose a cell from the table. Each value is derived from a right triangle — you will see the triangle, the relevant sides, and the step-by-step calculation.
+      </div>
+    </div>
+  </div>
+  <div class="hint-cell">Click any cell in the table — "Not Defined" cells explain why</div>
+
+  <script>
+    // Table data: rows = ratios, cols = angles 0,30,45,60,90
+    const angles=[0,30,45,60,90];
+    const ratios=['sin','cos','tan','cot','sec','cosec'];
+    const ratioColors={sin:'#ff00ff',cos:'#00f0ff',tan:'#ffaa00',cot:'#ffcc55',sec:'#88ddff',cosec:'#ff88cc'};
+
+    const S2='√2', S3='√3', h='½';
+    const tableVals={
+      sin: ['0','½','1/√2','√3/2','1'],
+      cos: ['1','√3/2','1/√2','½','0'],
+      tan: ['0','1/√3','1','√3','N/A'],
+      cot: ['N/A','√3','1','1/√3','0'],
+      sec: ['1','2/√3','√2','2','N/A'],
+      cosec:['N/A','2','√2','2/√3','1'],
+    };
+
+    const derivations={
+      'sin-0°':{title:'sin 0° = 0',sub:'As angle → 0°, opposite side BC → 0',deriv:'When A = 0°, the segment AC lies flat on AB.\nBC (opposite) = 0,  AC (hyp) = r\nsin 0° = BC/AC = 0/r = <strong>0</strong>',tri:{ang:0.5,focus:'opp'}},
+      'sin-30°':{title:'sin 30° = ½',sub:'From 30-60-90 triangle: opp=a, hyp=2a',deriv:'Equilateral △ABC side=2a, perpendicular AD drawn.\nIn △ABD: AB=2a, BD=a (opp), AD=a√3, ∠ABD=60°, ∠BAD=30°\nsin 30° = BD/AB = a/2a = <strong>1/2 = 0.500</strong>',tri:{ang:30,focus:'opp'}},
+      'sin-45°':{title:'sin 45° = 1/√2',sub:'Isosceles right triangle: AB=BC=a, AC=a√2',deriv:'Isosceles △ABC: AB=BC=a, ∠B=90°, ∠A=∠C=45°\nAC = a√2 (by Pythagoras)\nsin 45° = BC/AC = a/a√2 = <strong>1/√2 ≈ 0.707</strong>',tri:{ang:45,focus:'opp'}},
+      'sin-60°':{title:'sin 60° = √3/2',sub:'From 30-60-90 triangle: opp=a√3, hyp=2a',deriv:'Equilateral △ side=2a, perp AD drawn.\nIn △ABD: AB=2a (hyp), AD=a√3 (opp at 60°), BD=a\nsin 60° = AD/AB = a√3/2a = <strong>√3/2 ≈ 0.866</strong>',tri:{ang:60,focus:'opp'}},
+      'sin-90°':{title:'sin 90° = 1',sub:'As angle → 90°, opposite = hypotenuse',deriv:'When A = 90°, segment AB (adjacent) → 0.\nBC (opposite) = r = AC (hypotenuse)\nsin 90° = BC/AC = r/r = <strong>1</strong>',tri:{ang:89.5,focus:'opp'}},
+      'cos-0°':{title:'cos 0° = 1',sub:'At 0° adjacent = hypotenuse',deriv:'When A = 0°, BC = 0, AB = AC = r\ncos 0° = AB/AC = r/r = <strong>1</strong>',tri:{ang:0.5,focus:'adj'}},
+      'cos-30°':{title:'cos 30° = √3/2',sub:'Adjacent = a√3, hypotenuse = 2a',deriv:'In △ABD (30-60-90): ∠BAD=30°\nAD = a√3 (adj), AB = 2a (hyp)\ncos 30° = AD/AB = a√3/2a = <strong>√3/2 ≈ 0.866</strong>',tri:{ang:30,focus:'adj'}},
+      'cos-45°':{title:'cos 45° = 1/√2',sub:'Adjacent = a, hypotenuse = a√2',deriv:'Isosceles △: AB = a (adj), AC = a√2 (hyp)\ncos 45° = AB/AC = a/a√2 = <strong>1/√2 ≈ 0.707</strong>',tri:{ang:45,focus:'adj'}},
+      'cos-60°':{title:'cos 60° = ½',sub:'Adjacent = a, hypotenuse = 2a',deriv:'In △ABD (30-60-90): ∠ABD=60°\nBD = a (adj), AB = 2a (hyp)\ncos 60° = BD/AB = a/2a = <strong>1/2 = 0.500</strong>',tri:{ang:60,focus:'adj'}},
+      'cos-90°':{title:'cos 90° = 0',sub:'At 90° adjacent side → 0',deriv:'When A = 90°, AB (adjacent) = 0\ncos 90° = AB/AC = 0/r = <strong>0</strong>',tri:{ang:89.5,focus:'adj'}},
+      'tan-0°':{title:'tan 0° = 0',sub:'tan = sin/cos = 0/1',deriv:'tan 0° = sin 0° / cos 0° = 0/1 = <strong>0</strong>\nAlso: tan = opp/adj = 0/r = <strong>0</strong>',tri:{ang:0.5,focus:'tan'}},
+      'tan-30°':{title:'tan 30° = 1/√3',sub:'opp=a, adj=a√3',deriv:'In △ABD (30-60-90): ∠BAD=30°\nBD=a (opp), AD=a√3 (adj)\ntan 30° = BD/AD = a/a√3 = <strong>1/√3 ≈ 0.577</strong>',tri:{ang:30,focus:'tan'}},
+      'tan-45°':{title:'tan 45° = 1',sub:'opp = adj (isosceles)',deriv:'Isosceles △: AB=BC=a\ntan 45° = BC/AB = a/a = <strong>1</strong>',tri:{ang:45,focus:'tan'}},
+      'tan-60°':{title:'tan 60° = √3',sub:'opp=a√3, adj=a',deriv:'In △ABD: ∠ABD=60°\nAD=a√3 (opp), BD=a (adj)\ntan 60° = AD/BD = a√3/a = <strong>√3 ≈ 1.732</strong>',tri:{ang:60,focus:'tan'}},
+      'tan-90°':{title:'tan 90° = Not Defined',sub:'cos 90° = 0, division by zero',deriv:'tan 90° = sin 90° / cos 90° = 1/0\nDivision by zero → <strong>Not Defined (∞)</strong>\nAs A→90°, tan A grows without bound.',tri:{ang:89.5,focus:'undef'}},
+      'cot-0°':{title:'cot 0° = Not Defined',sub:'sin 0° = 0, division by zero',deriv:'cot 0° = cos 0° / sin 0° = 1/0\nDivision by zero → <strong>Not Defined (∞)</strong>',tri:{ang:0.5,focus:'undef'}},
+      'cot-30°':{title:'cot 30° = √3',sub:'adj=a√3, opp=a',deriv:'cot 30° = cos 30°/sin 30° = (√3/2)/(1/2) = <strong>√3 ≈ 1.732</strong>\nAlso: adj/opp = a√3/a = √3',tri:{ang:30,focus:'cot'}},
+      'cot-45°':{title:'cot 45° = 1',sub:'adj = opp',deriv:'cot 45° = cos 45°/sin 45° = 1\nAlso: adj/opp = a/a = <strong>1</strong>',tri:{ang:45,focus:'cot'}},
+      'cot-60°':{title:'cot 60° = 1/√3',sub:'adj=a, opp=a√3',deriv:'cot 60° = cos 60°/sin 60° = (1/2)/(√3/2) = <strong>1/√3 ≈ 0.577</strong>',tri:{ang:60,focus:'cot'}},
+      'cot-90°':{title:'cot 90° = 0',sub:'adj=0, cot=adj/opp',deriv:'cot 90° = cos 90°/sin 90° = 0/1 = <strong>0</strong>',tri:{ang:89.5,focus:'cot'}},
+      'sec-0°':{title:'sec 0° = 1',sub:'1/cos 0° = 1/1',deriv:'sec 0° = 1/cos 0° = 1/1 = <strong>1</strong>',tri:{ang:0.5,focus:'sec'}},
+      'sec-30°':{title:'sec 30° = 2/√3',sub:'1/cos 30° = 1/(√3/2)',deriv:'sec 30° = 1/cos 30° = 1/(√3/2) = <strong>2/√3 ≈ 1.155</strong>',tri:{ang:30,focus:'sec'}},
+      'sec-45°':{title:'sec 45° = √2',sub:'1/cos 45° = 1/(1/√2)',deriv:'sec 45° = 1/cos 45° = 1/(1/√2) = <strong>√2 ≈ 1.414</strong>',tri:{ang:45,focus:'sec'}},
+      'sec-60°':{title:'sec 60° = 2',sub:'1/cos 60° = 1/(½)',deriv:'sec 60° = 1/cos 60° = 1/(1/2) = <strong>2</strong>',tri:{ang:60,focus:'sec'}},
+      'sec-90°':{title:'sec 90° = Not Defined',sub:'cos 90° = 0, division by zero',deriv:'sec 90° = 1/cos 90° = 1/0 → <strong>Not Defined (∞)</strong>',tri:{ang:89.5,focus:'undef'}},
+      'cosec-0°':{title:'cosec 0° = Not Defined',sub:'sin 0° = 0, division by zero',deriv:'cosec 0° = 1/sin 0° = 1/0 → <strong>Not Defined (∞)</strong>',tri:{ang:0.5,focus:'undef'}},
+      'cosec-30°':{title:'cosec 30° = 2',sub:'1/sin 30° = 1/(½)',deriv:'cosec 30° = 1/sin 30° = 1/(1/2) = <strong>2</strong>',tri:{ang:30,focus:'cosec'}},
+      'cosec-45°':{title:'cosec 45° = √2',sub:'1/sin 45° = 1/(1/√2)',deriv:'cosec 45° = 1/sin 45° = 1/(1/√2) = <strong>√2 ≈ 1.414</strong>',tri:{ang:45,focus:'cosec'}},
+      'cosec-60°':{title:'cosec 60° = 2/√3',sub:'1/sin 60° = 1/(√3/2)',deriv:'cosec 60° = 1/sin 60° = 1/(√3/2) = <strong>2/√3 ≈ 1.155</strong>',tri:{ang:60,focus:'cosec'}},
+      'cosec-90°':{title:'cosec 90° = 1',sub:'1/sin 90° = 1/1',deriv:'cosec 90° = 1/sin 90° = 1/1 = <strong>1</strong>',tri:{ang:89.5,focus:'cosec'}},
+    };
+
+    const tbody=document.getElementById('tbody');
+    let activeCell=null;
+    ratios.forEach(ratio=>{
+      const tr=document.createElement('tr');
+      const th=document.createElement('th');
+      th.className='row-head';th.textContent=ratio+' A';th.style.color=ratioColors[ratio];
+      tr.appendChild(th);
+      angles.forEach(ang=>{
+        const td=document.createElement('td');
+        const val=tableVals[ratio][angles.indexOf(ang)];
+        const isUndef=val==='N/A';
+        td.textContent=isUndef?'—':val;
+        td.style.color=isUndef?'#ff4455':ratioColors[ratio];
+        if(isUndef) td.className='undef';
+        td.title=isUndef?`${ratio} ${ang}° is Not Defined (division by zero)`:ratio+' '+ang+'°';
+        td.onclick=()=>selectCell(ratio,ang,td);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    function selectCell(ratio,ang,td){
+      if(activeCell) activeCell.classList.remove('active');
+      activeCell=td;td.classList.add('active');
+      const key=`${ratio}-${ang}°`;
+      const d=derivations[key];
+      if(!d)return;
+      document.getElementById('detailTitle').textContent=d.title;
+      document.getElementById('detailSub').textContent=d.sub;
+      document.getElementById('derivation').innerHTML=d.deriv.replace(/\n/g,'<br>');
+      drawDetailTri(d.tri.ang,d.tri.focus);
+    }
+
+    const dCanvas=document.getElementById('detailCanvas');
+    const dCtx=dCanvas.getContext('2d');
+
+    function drawDetailTri(angDeg,focus){
+      const W2=dCanvas.offsetWidth||400, H2=dCanvas.offsetHeight||200;
+      dCanvas.width=W2;dCanvas.height=H2;
+      dCtx.clearRect(0,0,W2,H2);
+
+      const rad=angDeg*Math.PI/180;
+      const r=Math.min(W2*0.32,H2*0.52);
+      const cx=W2*0.38, cy=H2*0.68;
+
+      const A={x:cx,y:cy};
+      const C={x:cx+r*Math.cos(rad),y:cy-r*Math.sin(rad)};
+      const B={x:C.x,y:cy};
+
+      // Focus colors
+      const colMap={opp:'#ff00ff',adj:'#ffaa00',hyp:'#00f0ff',tan:'#ffaa00',cot:'#ffcc55',sec:'#88ddff',cosec:'#ff88cc',undef:'#ff4455'};
+      const focusCol=colMap[focus]||'#00ff88';
+
+      const getCol=(side)=>{
+        if(focus==='undef') return 'rgba(255,68,85,.6)';
+        if(focus==='opp'&&side==='opp') return '#ff00ff';
+        if(focus==='adj'&&side==='adj') return '#ffaa00';
+        if(focus==='tan'&&(side==='opp'||side==='adj')) return side==='opp'?'#ff00ff':'#ffaa00';
+        if(focus==='cot'&&(side==='opp'||side==='adj')) return side==='adj'?'#ffaa00':'#ff00ff';
+        if(focus==='sec'&&(side==='adj'||side==='hyp')) return side==='hyp'?'#00f0ff':'#ffaa00';
+        if(focus==='cosec'&&(side==='opp'||side==='hyp')) return side==='hyp'?'#00f0ff':'#ff00ff';
+        if(side==='hyp') return '#00f0ff';
+        return 'rgba(180,190,220,.5)';
+      };
+
+      function dLine(p1,p2,col,lw){
+        dCtx.beginPath();dCtx.moveTo(p1.x,p1.y);dCtx.lineTo(p2.x,p2.y);
+        dCtx.strokeStyle=col;dCtx.lineWidth=lw||3.5;dCtx.shadowColor=col;dCtx.shadowBlur=8;dCtx.stroke();dCtx.shadowBlur=0;
+      }
+
+      // Fill
+      dCtx.beginPath();dCtx.moveTo(A.x,A.y);dCtx.lineTo(B.x,B.y);dCtx.lineTo(C.x,C.y);dCtx.closePath();
+      dCtx.fillStyle='rgba(0,240,255,.05)';dCtx.fill();
+
+      dLine(A,C,getCol('hyp'),4);
+      if(angDeg>1) dLine(B,C,getCol('opp'),4);
+      if(angDeg<89) dLine(A,B,getCol('adj'),4);
+
+      // Right angle
+      if(angDeg>2&&angDeg<88){
+        const sq=10;
+        dCtx.beginPath();dCtx.moveTo(B.x-sq,B.y);dCtx.lineTo(B.x-sq,B.y-sq);dCtx.lineTo(B.x,B.y-sq);
+        dCtx.strokeStyle='rgba(200,210,255,.45)';dCtx.lineWidth=1.5;dCtx.stroke();
+      }
+
+      // Angle arc
+      dCtx.beginPath();dCtx.arc(A.x,A.y,28,-rad,0);
+      dCtx.strokeStyle='#00ff88';dCtx.lineWidth=2;dCtx.shadowColor='#00ff88';dCtx.shadowBlur=5;dCtx.stroke();dCtx.shadowBlur=0;
+      dCtx.font='bold 13px Segoe UI';dCtx.fillStyle='#00ff88';dCtx.textAlign='center';dCtx.textBaseline='middle';
+      dCtx.fillText(`${Math.round(angDeg)}°`,A.x+46,-rad/2>-0.1?cy-12:A.y+Math.sin(-rad/2)*44);
+
+      [[A,'A',-14,12],[B,'B',14,14],[C,'C',14,-14]].forEach(([p,l,dx,dy])=>{
+        dCtx.font='bold 14px Segoe UI';dCtx.fillStyle='rgba(5,5,20,.8)';dCtx.fillRect(p.x+dx-8,p.y+dy-8,16,16);
+        dCtx.fillStyle='#dde4ff';dCtx.textAlign='center';dCtx.textBaseline='middle';dCtx.fillText(l,p.x+dx,p.y+dy);
+      });
+
+      // Side labels
+      function midLbl2(p1,p2,t,col,ox,oy){
+        const mx=(p1.x+p2.x)/2+ox, my=(p1.y+p2.y)/2+oy;
+        dCtx.font='bold 11px Segoe UI';const tw=dCtx.measureText(t).width;
+        dCtx.fillStyle='rgba(5,5,20,.82)';
+        dCtx.beginPath();dCtx.roundRect(mx-tw/2-5,my-9,tw+10,18,4);dCtx.fill();
+        dCtx.fillStyle=col;dCtx.textAlign='center';dCtx.textBaseline='middle';dCtx.fillText(t,mx,my);
+      }
+      midLbl2(A,C,'hyp','#00f0ff',-26,0);
+      if(angDeg>1) midLbl2(B,C,'opp','#ff00ff',22,0);
+      if(angDeg<89) midLbl2(A,B,'adj','#ffaa00',0,16);
+    }
+
+    window.addEventListener('resize',()=>{
+      if(activeCell) activeCell.click();
+    });
+  </script>
+</body>
+</html>

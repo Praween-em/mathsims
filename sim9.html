@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Complementary Angles — Trigonometric Ratios</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--bg:#050510;--panel:rgba(5,5,20,.9);--border:rgba(0,240,255,.3);--hyp:#00f0ff;--opp:#ff00ff;--adj:#ffaa00;--ang:#00ff88;--text:#dde4ff}
+    body{background:var(--bg);font-family:'Segoe UI',sans-serif;overflow:hidden;color:var(--text);touch-action:none}
+    canvas{display:block;position:absolute;top:0;left:0}
+    #badge{position:absolute;top:15px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:6px 18px;font-size:clamp(.7rem,2.5vw,.95rem);letter-spacing:1.5px;color:#00f0ff;text-shadow:0 0 8px rgba(0,240,255,.5);backdrop-filter:blur(10px);pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,240,255,.15);z-index:10}
+    #slider-bar{position:absolute;bottom:110px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px 20px;backdrop-filter:blur(12px);z-index:10}
+    #slider-bar label{font-size:.78rem;color:#8899bb;white-space:nowrap}
+    #angSlider{-webkit-appearance:none;width:260px;height:6px;border-radius:3px;background:#151530;border:1px solid rgba(0,240,255,.2);outline:none;cursor:pointer}
+    #angSlider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#00ff88;box-shadow:0 0 10px #00ff88cc;cursor:pointer;border:2px solid #fff}
+    #angVal{font-size:1.1rem;font-weight:800;color:#00ff88;min-width:44px;text-align:center}
+    #compVal{font-size:1.1rem;font-weight:800;color:#ff6600;min-width:44px;text-align:center}
+    #identities{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 18px;backdrop-filter:blur(12px);z-index:10;display:flex;gap:24px;flex-wrap:wrap;justify-content:center}
+    .irow{font-size:.76rem;text-align:center;line-height:1.5}
+    .irow .lhs{color:#dde4ff}.irow .eq{color:#556688}.irow .rhs{color:#00ff88}
+    #hint{position:absolute;top:60px;left:50%;transform:translateX(-50%);font-size:.72rem;color:#556688;pointer-events:none;background:rgba(5,5,15,.6);padding:3px 10px;border-radius:8px;z-index:10}
+  </style>
+</head>
+<body>
+  <div id="badge">Complementary Angles — sin(90°−A) = cos A</div>
+  <canvas id="c"></canvas>
+  <div id="hint">Drag the slider to change angle A — watch how the pairs mirror each other</div>
+  <div id="slider-bar">
+    <label>∠A =</label><div id="angVal">40°</div>
+    <input type="range" id="angSlider" min="1" max="89" value="40" step="0.5">
+    <label>∠(90°−A) =</label><div id="compVal">50°</div>
+  </div>
+  <div id="identities">
+    <div class="irow"><div class="lhs" id="i1l">sin 40°</div><div class="eq">=</div><div class="rhs" id="i1r">cos 50°</div></div>
+    <div class="irow"><div class="lhs" id="i2l">cos 40°</div><div class="eq">=</div><div class="rhs" id="i2r">sin 50°</div></div>
+    <div class="irow"><div class="lhs" id="i3l">tan 40°</div><div class="eq">=</div><div class="rhs" id="i3r">cot 50°</div></div>
+    <div class="irow"><div class="lhs" id="i4l">cot 40°</div><div class="eq">=</div><div class="rhs" id="i4r">tan 50°</div></div>
+    <div class="irow"><div class="lhs" id="i5l">sec 40°</div><div class="eq">=</div><div class="rhs" id="i5r">cosec 50°</div></div>
+    <div class="irow"><div class="lhs" id="i6l">cosec 40°</div><div class="eq">=</div><div class="rhs" id="i6r">sec 50°</div></div>
+  </div>
+
+  <script>
+    const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+    let W,H; function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
+    resize(); window.addEventListener('resize',resize);
+
+    let angA=40;
+    document.getElementById('angSlider').addEventListener('input',e=>{angA=Number(e.target.value)});
+
+    function rrect(x,y,w,h,r){
+      ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
+      ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);
+      ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);
+      ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);
+      ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+    }
+
+    function textBox(text,x,y,col,size){
+      ctx.font=`bold ${size||13}px Segoe UI`;const tw=ctx.measureText(text).width;
+      ctx.fillStyle='rgba(5,5,20,.82)';rrect(x-tw/2-7,y-11,tw+14,22,5);ctx.fill();
+      ctx.fillStyle=col||'#dde4ff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x,y);
+    }
+
+    function drawTriangle(cx,cy,a,angDeg,isComplement,r){
+      const rad=angDeg*Math.PI/180;
+      const base=r, height=r*Math.tan(rad);
+
+      // A=bottom-left(angle vertex), B=bottom-right (right angle), C=top-right
+      const A={x:cx-base/2, y:cy+height/2};
+      const B={x:cx+base/2, y:cy+height/2};
+      const C={x:cx+base/2, y:cy-height/2};
+
+      // Clamp
+      if(C.y<80) C.y=80;
+
+      const hyp=Math.sqrt((C.x-A.x)**2+(C.y-A.y)**2);
+      const adj=B.x-A.x;
+      const opp=B.y-C.y;
+
+      // Fill
+      ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.lineTo(C.x,C.y);ctx.closePath();
+      ctx.fillStyle=isComplement?'rgba(255,102,0,.06)':'rgba(0,240,255,.06)';ctx.fill();
+
+      // Hypotenuse
+      ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(C.x,C.y);
+      ctx.strokeStyle='#00f0ff';ctx.lineWidth=4;ctx.shadowColor='#00f0ff';ctx.shadowBlur=10;ctx.stroke();ctx.shadowBlur=0;
+
+      if(!isComplement){
+        // Left triangle: highlight based on focus angle A
+        // opp=BC(magenta), adj=AB(amber)
+        ctx.beginPath();ctx.moveTo(B.x,B.y);ctx.lineTo(C.x,C.y);
+        ctx.strokeStyle='#ff00ff';ctx.lineWidth=4;ctx.shadowColor='#ff00ff';ctx.shadowBlur=8;ctx.stroke();ctx.shadowBlur=0;
+        ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);
+        ctx.strokeStyle='#ffaa00';ctx.lineWidth=4;ctx.shadowColor='#ffaa00';ctx.shadowBlur=8;ctx.stroke();ctx.shadowBlur=0;
+      } else {
+        // Right triangle: for angle (90-A), opposite becomes adj of A, adjacent becomes opp of A
+        // So highlight in swapped colors to show the relation
+        ctx.beginPath();ctx.moveTo(B.x,B.y);ctx.lineTo(C.x,C.y);
+        ctx.strokeStyle='#ffaa00';ctx.lineWidth=4;ctx.shadowColor='#ffaa00';ctx.shadowBlur=8;ctx.stroke();ctx.shadowBlur=0; // was opp, now adj
+        ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);
+        ctx.strokeStyle='#ff00ff';ctx.lineWidth=4;ctx.shadowColor='#ff00ff';ctx.shadowBlur=8;ctx.stroke();ctx.shadowBlur=0; // was adj, now opp
+      }
+
+      // Right angle at B
+      const sq=12;
+      ctx.beginPath();ctx.moveTo(B.x-sq,B.y);ctx.lineTo(B.x-sq,B.y-sq);ctx.lineTo(B.x,B.y-sq);
+      ctx.strokeStyle='rgba(200,210,255,.45)';ctx.lineWidth=1.5;ctx.stroke();
+
+      // Angle arc at vertex A
+      const arcR=36;
+      const ang1=Math.atan2(C.y-A.y,C.x-A.x), ang2=0;
+      const lo=Math.min(ang1,ang2), hi=Math.max(ang1,ang2);
+      ctx.beginPath();ctx.arc(A.x,A.y,arcR,lo,hi);
+      ctx.strokeStyle=isComplement?'#ff6600':'#00ff88';ctx.lineWidth=2.5;ctx.shadowColor=isComplement?'#ff6600':'#00ff88';ctx.shadowBlur=6;ctx.stroke();ctx.shadowBlur=0;
+      const midArc=(lo+hi)/2;
+      const angLabel=isComplement?`${(90-angDeg).toFixed(1)}°`:`${angDeg.toFixed(1)}°`;
+      textBox(angLabel,A.x+Math.cos(midArc)*(arcR+18),A.y+Math.sin(midArc)*(arcR+18),isComplement?'#ff6600':'#00ff88');
+
+      // Vertex labels
+      const vlbls=isComplement?[
+        [A,'A\'',-20,6],[B,'B\'',18,18],[C,'C\'',18,-18]
+      ]:[
+        [A,'A',-20,6],[B,'B',18,18],[C,'C',18,-18]
+      ];
+      vlbls.forEach(([p,l,dx,dy])=>{
+        ctx.font='bold 16px Segoe UI';ctx.fillStyle='rgba(5,5,20,.8)';ctx.fillRect(p.x+dx-9,p.y+dy-9,18,18);
+        ctx.fillStyle='#dde4ff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(l,p.x+dx,p.y+dy);
+      });
+
+      // Ratio annotations
+      const sinV=Math.sin(rad), cosV=Math.cos(rad);
+      if(!isComplement){
+        textBox(`sin ${angDeg.toFixed(0)}°=${sinV.toFixed(3)}`,(B.x+C.x)/2+46,(B.y+C.y)/2,'#ff00ff',11);
+        textBox(`cos ${angDeg.toFixed(0)}°=${cosV.toFixed(3)}`,(A.x+B.x)/2,(B.y+18),'#00f0ff',11);
+      } else {
+        const compAng=90-angDeg;
+        const sinC=Math.sin(compAng*Math.PI/180), cosC=Math.cos(compAng*Math.PI/180);
+        textBox(`sin ${compAng.toFixed(0)}°=${sinC.toFixed(3)}`,(A.x+B.x)/2,(B.y+18),'#ff00ff',11);
+        textBox(`cos ${compAng.toFixed(0)}°=${cosC.toFixed(3)}`,(B.x+C.x)/2+46,(B.y+C.y)/2,'#00f0ff',11);
+      }
+
+      return {A,B,C,adj,opp};
+    }
+
+    function drawConnector(p1,p2,label,col){
+      // Draw curved arrow between two points
+      ctx.beginPath();
+      ctx.setLineDash([6,4]);
+      ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
+      ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.stroke();
+      ctx.setLineDash([]);
+      textBox(label,(p1.x+p2.x)/2,(p1.y+p2.y)/2-16,col,11);
+    }
+
+    function draw(){
+      ctx.clearRect(0,0,W,H);
+
+      const compA=90-angA;
+      const r=Math.min(W*0.17,130);
+      const midY=H*0.47;
+
+      // Left triangle (angle A)
+      const lx=W*0.27, rx=W*0.73;
+
+      const lTri=drawTriangle(lx,midY,angA,angA,false,r);
+      const rTri=drawTriangle(rx,midY,compA,angA,true,r);
+
+      // Connecting dashed lines showing equality
+      // sin(A) = cos(90-A): connect opp of left to adj of right
+      drawConnector(
+        {x:(lTri.B.x+lTri.C.x)/2+44,y:(lTri.B.y+lTri.C.y)/2},
+        {x:(rTri.A.x+rTri.B.x)/2,y:(rTri.B.y+18)},
+        '= equal =','#00ff88'
+      );
+
+      // cos(A) = sin(90-A): connect adj of left to opp of right
+      drawConnector(
+        {x:(lTri.A.x+lTri.B.x)/2,y:(lTri.B.y+18)},
+        {x:(rTri.B.x+rTri.C.x)/2+44,y:(rTri.B.y+rTri.C.y)/2},
+        '= equal =','#00ff88'
+      );
+
+      // Separator line
+      ctx.beginPath();ctx.moveTo(W*0.5,80);ctx.lineTo(W*0.5,H-130);
+      ctx.strokeStyle='rgba(0,240,255,.15)';ctx.lineWidth=1;ctx.setLineDash([6,8]);ctx.stroke();ctx.setLineDash([]);
+
+      // Panel labels above triangles
+      ctx.font='bold 15px Segoe UI';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle='#00ff88';ctx.fillText(`Angle A = ${angA.toFixed(1)}°`,lx,90);
+      ctx.fillStyle='#ff6600';ctx.fillText(`Angle (90°−A) = ${compA.toFixed(1)}°`,rx,90);
+
+      // Key identity row at top-center
+      ctx.font='bold 14px Segoe UI';ctx.fillStyle='#dde4ff';ctx.textAlign='center';
+      ctx.fillText('sin(90°−A) = cos A     and     cos(90°−A) = sin A',W/2,106);
+
+      // Update panel
+      const a=angA, comp=90-a;
+      document.getElementById('angVal').textContent=`${a}°`;
+      document.getElementById('compVal').textContent=`${comp}°`;
+      const ids=[
+        ['i1l',`sin ${a}°`],['i1r',`cos ${comp}°`],
+        ['i2l',`cos ${a}°`],['i2r',`sin ${comp}°`],
+        ['i3l',`tan ${a}°`],['i3r',`cot ${comp}°`],
+        ['i4l',`cot ${a}°`],['i4r',`tan ${comp}°`],
+        ['i5l',`sec ${a}°`],['i5r',`cosec ${comp}°`],
+        ['i6l',`cosec ${a}°`],['i6r',`sec ${comp}°`],
+      ];
+      ids.forEach(([id,t])=>document.getElementById(id).textContent=t);
+    }
+
+    function animate(){requestAnimationFrame(animate);draw()}
+    animate();
+  </script>
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>45° Isosceles Right Triangle Proof</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--bg:#050510;--panel:rgba(5,5,20,.9);--border:rgba(0,240,255,.3);--hyp:#00f0ff;--opp:#ff00ff;--adj:#ffaa00;--ang:#00ff88;--text:#dde4ff}
+    body{background:var(--bg);font-family:'Segoe UI',sans-serif;overflow:hidden;color:var(--text);touch-action:none}
+    canvas{display:block;position:absolute;top:0;left:0}
+    #badge{position:absolute;top:15px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:6px 18px;font-size:clamp(.7rem,2.5vw,.95rem);letter-spacing:1.5px;color:#00f0ff;text-shadow:0 0 8px rgba(0,240,255,.5);backdrop-filter:blur(10px);pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,240,255,.15);z-index:10}
+    #stepPanel{position:absolute;right:22px;top:50%;transform:translateY(-50%);background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:22px 18px;backdrop-filter:blur(14px);box-shadow:0 0 25px rgba(0,240,255,.15);min-width:220px;max-width:240px;display:flex;flex-direction:column;gap:14px;z-index:10}
+    #stepPanel h2{font-size:.62rem;letter-spacing:1.5px;text-transform:uppercase;color:#00f0ff;text-align:center}
+    .step-item{padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font-size:.78rem;line-height:1.55;color:#667788;transition:all .3s;cursor:default}
+    .step-item.done{color:#ccd4ee;border-color:rgba(0,240,255,.25);background:rgba(0,240,255,.06)}
+    .step-item.active{color:#fff;border-color:#00ff88;background:rgba(0,255,136,.1);box-shadow:0 0 14px rgba(0,255,136,.15)}
+    .step-num{font-size:.65rem;color:#00ff88;font-weight:700;letter-spacing:1px;margin-bottom:3px}
+    .div{width:100%;height:1px;background:var(--border)}
+    #nextBtn{padding:12px 0;border-radius:12px;border:1px solid rgba(0,240,255,.4);background:rgba(0,240,255,.12);color:#00f0ff;font-size:.88rem;font-weight:700;cursor:pointer;letter-spacing:.8px;transition:all .25s;text-align:center}
+    #nextBtn:hover{background:rgba(0,240,255,.24);box-shadow:0 0 14px rgba(0,240,255,.3)}
+    #nextBtn:disabled{opacity:.35;cursor:default}
+    #resetBtn{padding:8px 0;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#8899bb;font-size:.78rem;cursor:pointer;letter-spacing:.5px;transition:all .2s}
+    #resetBtn:hover{border-color:rgba(255,255,255,.3);color:#ccd4ee}
+    #hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-size:clamp(.6rem,1.8vw,.75rem);color:#556688;pointer-events:none;background:rgba(5,5,15,.6);padding:4px 12px;border-radius:8px;z-index:10}
+  </style>
+</head>
+<body>
+  <div id="badge">Trigonometric Ratios of 45° — Isosceles Right Triangle</div>
+  <canvas id="c"></canvas>
+
+  <div id="stepPanel">
+    <h2>Step-by-Step Proof</h2>
+    <div class="step-item active" id="s0">
+      <div class="step-num">STEP 1</div>
+      Draw isosceles right △ABC<br>with ∠B = 90°, ∠A = ∠C = 45°
+    </div>
+    <div class="step-item" id="s1">
+      <div class="step-num">STEP 2</div>
+      Since ∠A = ∠C, the sides opposite are equal:<br>
+      <strong style="color:#ff00ff">AB = BC = a</strong>
+    </div>
+    <div class="step-item" id="s2">
+      <div class="step-num">STEP 3</div>
+      By Pythagoras theorem:<br>
+      AC² = AB² + BC² = a² + a² = 2a²<br>
+      <strong style="color:#00f0ff">AC = a√2</strong>
+    </div>
+    <div class="step-item" id="s3">
+      <div class="step-num">STEP 4</div>
+      sin 45° = opp/hyp = <strong style="color:#ff00ff">a</strong> / <strong style="color:#00f0ff">a√2</strong> = <strong style="color:#00ff88">1/√2</strong><br>
+      cos 45° = adj/hyp = <strong style="color:#ffaa00">a</strong> / <strong style="color:#00f0ff">a√2</strong> = <strong style="color:#00ff88">1/√2</strong><br>
+      tan 45° = opp/adj = <strong style="color:#ff00ff">a</strong> / <strong style="color:#ffaa00">a</strong> = <strong style="color:#00ff88">1</strong>
+    </div>
+    <div class="div"></div>
+    <button id="nextBtn" onclick="nextStep()">Next Step →</button>
+    <button id="resetBtn" onclick="reset()">↺ Restart</button>
+  </div>
+  <div id="hint">Click "Next Step" to build the proof step by step</div>
+
+  <script>
+    const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+    let W,H; function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
+    resize(); window.addEventListener('resize',resize);
+
+    let step=0; // 0..3
+    let anim={}; // per-step animation progress
+
+    // Initialize animation targets
+    for(let i=0;i<4;i++) anim[i]=0;
+    anim[0]=1; // Step 0 starts visible
+
+    function nextStep(){
+      if(step>=3){document.getElementById('nextBtn').disabled=true;return}
+      step++;
+      for(let i=0;i<=step;i++){
+        document.getElementById('s'+i).className='step-item '+(i===step?'active':'done');
+      }
+      if(step===3) document.getElementById('nextBtn').disabled=true;
+    }
+
+    function reset(){
+      step=0;
+      for(let i=0;i<4;i++){anim[i]=0;document.getElementById('s'+i).className='step-item'+(i===0?' active':'')}
+      anim[0]=1;
+      document.getElementById('nextBtn').disabled=false;
+    }
+
+    function ease(t){return t<.5?2*t*t:-1+(4-2*t)*t}
+
+    function rrect(x,y,w,h,r){
+      ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
+      ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);
+      ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);
+      ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);
+      ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+    }
+
+    function drawLine(p1,p2,col,lw,blur){
+      ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);
+      ctx.strokeStyle=col;ctx.lineWidth=lw||4;ctx.shadowColor=col;ctx.shadowBlur=blur||10;ctx.stroke();ctx.shadowBlur=0;
+    }
+
+    function textBox(text,x,y,col,bg){
+      ctx.font='bold 14px Segoe UI';const tw=ctx.measureText(text).width;
+      ctx.fillStyle=bg||'rgba(5,5,20,.82)';rrect(x-tw/2-8,y-11,tw+16,22,5);ctx.fill();
+      ctx.fillStyle=col||'#dde4ff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x,y);
+    }
+
+    let last=0;
+    function draw(ts){
+      requestAnimationFrame(draw);
+      const dt=(ts-last)/1000;last=ts;
+
+      // Animate step entrance
+      for(let i=0;i<=step;i++){
+        if(anim[i]<1) anim[i]=Math.min(anim[i]+dt*2.5,1);
+      }
+      if(step>0 && anim[step]<1) anim[step]=Math.min(anim[step]+dt*2.5,1);
+
+      ctx.clearRect(0,0,W,H);
+
+      const cx=W*0.38, cy=H*0.5;
+      const a=Math.min(W*0.22,180);
+
+      // Triangle vertices: B=bottom-right (right angle), A=bottom-left, C=top-right
+      const A={x:cx-a, y:cy+a};
+      const B={x:cx+a, y:cy+a};
+      const C={x:cx+a, y:cy-a};
+
+      const t0=ease(anim[0]);
+
+      // ── Step 0: Draw triangle outline ──
+      if(anim[0]>0){
+        const t=ease(anim[0]);
+        // Fill
+        ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.lineTo(C.x,C.y);ctx.closePath();
+        ctx.fillStyle=`rgba(0,240,255,${.05*t})`;ctx.fill();
+
+        // Right angle at B
+        const sq=15;ctx.globalAlpha=t;
+        ctx.beginPath();ctx.moveTo(B.x-sq,B.y);ctx.lineTo(B.x-sq,B.y-sq);ctx.lineTo(B.x,B.y-sq);
+        ctx.strokeStyle='rgba(200,210,255,.5)';ctx.lineWidth=2;ctx.stroke();
+        ctx.font='11px Segoe UI';ctx.fillStyle='rgba(200,210,255,.55)';ctx.textAlign='center';
+        ctx.fillText('90°',B.x-sq*1.7,B.y-sq*1.7);
+
+        // Angle arcs at A and C (both 45°)
+        const arcR=36;
+        // At A
+        ctx.beginPath();ctx.arc(A.x,A.y,arcR,Math.atan2(C.y-A.y,C.x-A.x),0);
+        ctx.strokeStyle='#00ff88';ctx.lineWidth=2;ctx.shadowColor='#00ff88';ctx.shadowBlur=6;ctx.stroke();ctx.shadowBlur=0;
+        // At C
+        ctx.beginPath();ctx.arc(C.x,C.y,arcR,Math.atan2(A.y-C.y,A.x-C.x),Math.atan2(B.y-C.y,B.x-C.x));
+        ctx.strokeStyle='#00ff88';ctx.lineWidth=2;ctx.shadowColor='#00ff88';ctx.shadowBlur=6;ctx.stroke();ctx.shadowBlur=0;
+
+        ctx.globalAlpha=1;
+
+        // Draw sides (neutral color in step 0)
+        drawLine(A,C,'rgba(180,190,220,.7)',3.5,5);
+        drawLine(B,C,'rgba(180,190,220,.7)',3.5,5);
+        drawLine(A,B,'rgba(180,190,220,.7)',3.5,5);
+
+        // Vertex labels
+        [[A,'A',-20,5],[B,'B',20,18],[C,'C',18,-18]].forEach(([p,l,dx,dy])=>{
+          ctx.font='bold 17px Segoe UI';ctx.fillStyle='rgba(5,5,20,.8)';ctx.fillRect(p.x+dx-9,p.y+dy-9,18,18);
+          ctx.fillStyle='#dde4ff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(l,p.x+dx,p.y+dy);
+        });
+
+        // Angle labels
+        const midAngA=Math.atan2(C.y-A.y,C.x-A.x)/2;
+        textBox('45°',A.x+Math.cos(midAngA)*(arcR+18),A.y+Math.sin(midAngA)*(arcR+18),'#00ff88');
+        const midAngC=(Math.atan2(A.y-C.y,A.x-C.x)+Math.atan2(B.y-C.y,B.x-C.x))/2;
+        textBox('45°',C.x+Math.cos(midAngC)*(arcR+18),C.y+Math.sin(midAngC)*(arcR+18),'#00ff88');
+      }
+
+      // ── Step 1: Highlight equal sides AB = BC = a ──
+      if(anim[1]>0){
+        const t=ease(anim[1]);
+        ctx.globalAlpha=t;
+        drawLine(B,C,'#ff00ff',5,12);
+        drawLine(A,B,'#ffaa00',5,12);
+        ctx.globalAlpha=1;
+        // Tick marks (equal sides)
+        function tick(p1,p2,col){
+          const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2;
+          const ang=Math.atan2(p2.y-p1.y,p2.x-p1.x)+Math.PI/2;
+          for(let d of[-6,6]){
+            ctx.beginPath();ctx.moveTo(mx+Math.cos(ang)*d,my+Math.sin(ang)*d);
+            ctx.lineTo(mx+Math.cos(ang-Math.PI)*d,my+Math.sin(ang-Math.PI)*d);
+            ctx.strokeStyle=col;ctx.lineWidth=2;ctx.shadowColor=col;ctx.shadowBlur=4;ctx.stroke();ctx.shadowBlur=0;
+          }
+        }
+        ctx.globalAlpha=t;
+        tick(A,B,'#ffaa00');tick(B,C,'#ff00ff');
+        ctx.globalAlpha=1;
+        textBox('a',(A.x+B.x)/2,(A.y+B.y)/2+22,'#ffaa00');
+        textBox('a',(B.x+C.x)/2+22,(B.y+C.y)/2,'#ff00ff');
+      }
+
+      // ── Step 2: Hypotenuse AC = a√2 ──
+      if(anim[2]>0){
+        const t=ease(anim[2]);
+        ctx.globalAlpha=t;
+        drawLine(A,C,'#00f0ff',5,14);
+        ctx.globalAlpha=1;
+        textBox('AC = a√2',(A.x+C.x)/2-55,(A.y+C.y)/2,'#00f0ff');
+
+        // Pythagoras annotation
+        const px=W*0.12,py=cy-60;
+        ctx.globalAlpha=t;
+        ctx.fillStyle='rgba(5,5,20,.85)';ctx.strokeStyle='rgba(0,240,255,.25)';ctx.lineWidth=1;
+        rrect(px,py,220,64,10);ctx.fill();ctx.stroke();
+        ctx.font='13px Segoe UI';ctx.fillStyle='#ccd4ee';ctx.textAlign='left';ctx.textBaseline='middle';
+        ctx.fillText('AC² = AB² + BC²',px+12,py+18);
+        ctx.fillText('= a² + a² = 2a²',px+12,py+38);
+        ctx.font='bold 13px Segoe UI';ctx.fillStyle='#00f0ff';ctx.fillText('∴ AC = a√2',px+12,py+56);
+        ctx.globalAlpha=1;
+      }
+
+      // ── Step 3: Final ratio values ──
+      if(anim[3]>0){
+        const t=ease(anim[3]);
+        ctx.globalAlpha=t;
+        const bX=W*0.06, bY=H-190, bW=380, bH=158;
+        ctx.fillStyle='rgba(5,5,20,.92)';ctx.strokeStyle='rgba(0,255,136,.3)';ctx.lineWidth=1.5;
+        rrect(bX,bY,bW,bH,14);ctx.fill();ctx.stroke();
+
+        ctx.font='bold 13px Segoe UI';ctx.textAlign='left';ctx.textBaseline='middle';
+        const lines=[
+          {col:'#ff00ff',t:'sin 45°  = opp / hyp  =  a / a√2  =  1/√2  ≈  0.707'},
+          {col:'#00f0ff',t:'cos 45°  = adj / hyp  =  a / a√2  =  1/√2  ≈  0.707'},
+          {col:'#ffaa00',t:'tan 45°  = opp / adj  =  a / a     =  1'},
+          {col:'#88ddff',t:'cosec 45° = √2 ,   sec 45° = √2 ,   cot 45° = 1'},
+        ];
+        lines.forEach((l,i)=>{
+          ctx.fillStyle=l.col;ctx.fillText(l.t,bX+16,bY+22+i*34);
+        });
+        ctx.globalAlpha=1;
+      }
+    }
+
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>

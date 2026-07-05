@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Similar Triangles Activity</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--bg:#050510;--panel:rgba(5,5,20,.9);--border:rgba(0,240,255,.3);--hyp:#00f0ff;--opp:#ff00ff;--adj:#ffaa00;--ang:#00ff88;--text:#dde4ff}
+    body{background:var(--bg);font-family:'Segoe UI',sans-serif;overflow:hidden;color:var(--text);touch-action:none}
+    canvas{display:block}
+    #badge{position:absolute;top:15px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:6px 18px;font-size:clamp(.7rem,2.5vw,.95rem);letter-spacing:1.5px;color:#00f0ff;text-shadow:0 0 8px rgba(0,240,255,.5);backdrop-filter:blur(10px);pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,240,255,.15)}
+    #ui{position:absolute;right:22px;top:50%;transform:translateY(-50%);background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:22px 16px;backdrop-filter:blur(14px);box-shadow:0 0 25px rgba(0,240,255,.15);min-width:185px;display:flex;flex-direction:column;gap:12px;align-items:center}
+    #ui h2{font-size:.62rem;letter-spacing:1.5px;text-transform:uppercase;color:#00f0ff;text-align:center}
+    .ratio-row{display:flex;justify-content:space-between;align-items:center;width:100%;gap:8px}
+    .ratio-lbl{font-size:.72rem;color:#8899bb}
+    .ratio-val{font-size:.88rem;font-weight:bold;min-width:44px;text-align:right}
+    .div{width:100%;height:1px;background:var(--border)}
+    .note{font-size:.68rem;color:#556688;text-align:center;line-height:1.6}
+    #hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-size:clamp(.6rem,1.8vw,.75rem);color:#556688;pointer-events:none;background:rgba(5,5,15,.6);padding:4px 12px;border-radius:8px}
+  </style>
+</head>
+<body>
+  <div id="badge">Similar Triangles — Trigonometric Ratios Stay Constant</div>
+  <canvas id="c"></canvas>
+  <div id="ui">
+    <h2>Ratios (opp/hyp)</h2>
+    <div class="ratio-row"><span class="ratio-lbl">BP / AP =</span><span class="ratio-val" id="r1" style="color:#00ff88">0.800</span></div>
+    <div class="ratio-row"><span class="ratio-lbl">CQ / AQ =</span><span class="ratio-val" id="r2" style="color:#00ff88">0.800</span></div>
+    <div class="ratio-row"><span class="ratio-lbl">DR / AR =</span><span class="ratio-val" id="r3" style="color:#00ff88">0.800</span></div>
+    <div class="ratio-row"><span class="ratio-lbl">ES / AS =</span><span class="ratio-val" id="r4" style="color:#00ff88">0.800</span></div>
+    <div class="div"></div>
+    <div class="note">All ratios = <strong style="color:#00ff88">4/5 = 0.800</strong><br>= sin θ = constant<br>regardless of size!</div>
+    <div class="div"></div>
+    <div class="ratio-row"><span class="ratio-lbl">sin θ =</span><span class="ratio-val" id="sinval" style="color:#ff00ff">0.800</span></div>
+    <div class="ratio-row"><span class="ratio-lbl">cos θ =</span><span class="ratio-val" id="cosval" style="color:#00f0ff">0.600</span></div>
+    <div class="div"></div>
+    <div class="note">Drag the pink handle<br>along the baseline</div>
+  </div>
+  <div id="hint">Drag the ● handle to stretch the triangles — ratios never change</div>
+
+  <script>
+    const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+    let W,H;
+
+    function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
+    resize(); window.addEventListener('resize',resize);
+
+    // The textbook activity: A at left, B,C,D,E along baseline at 3,6,9,12cm
+    // BP,CQ,DR,ES perpendiculars at 4,8,12,16cm  ratio = 4/5 always
+    // We let user drag the "scale unit" to make it dynamic
+
+    let scale=1.0; // 0.5..2.5
+    const BASE_UNIT=50; // pixels per "3cm unit" when scale=1
+
+    // Drag state
+    let dragging=false;
+
+    function getHandlePos(){
+      const bx=getBaseX(), ay=getAY();
+      const unit=BASE_UNIT*scale;
+      return {x:bx+unit*5.0, y:ay};
+    }
+
+    function getBaseX(){return W*0.12}
+    function getAY(){return H*0.72}
+
+    canvas.addEventListener('pointerdown',e=>{
+      const h=getHandlePos();
+      const dx=e.clientX-h.x, dy=e.clientY-h.y;
+      if(Math.sqrt(dx*dx+dy*dy)<22){dragging=true;canvas.setPointerCapture(e.pointerId)}
+    });
+    canvas.addEventListener('pointermove',e=>{
+      if(!dragging)return;
+      const bx=getBaseX();
+      const newX=e.clientX-bx;
+      scale=Math.max(0.45,Math.min(2.6, newX/(BASE_UNIT*5)));
+    });
+    canvas.addEventListener('pointerup',()=>dragging=false);
+    canvas.addEventListener('pointercancel',()=>dragging=false);
+
+    function rrect(x,y,w,h,r){
+      ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
+      ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);
+      ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);
+      ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);
+      ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+    }
+
+    function draw(){
+      ctx.clearRect(0,0,W,H);
+
+      const ax=getBaseX(), ay=getAY();
+      const unit=BASE_UNIT*scale;
+
+      // Positions along baseline: B,C,D,E at 1,2,3,4 units (representing 3,6,9,12 cm)
+      const pts=[
+        {base:{x:ax+unit,y:ay}, top:{x:ax+unit,y:ay-unit*(4/3)}, lbl:'B', tlbl:'P'},
+        {base:{x:ax+unit*2,y:ay}, top:{x:ax+unit*2,y:ay-unit*(8/3)}, lbl:'C', tlbl:'Q'},
+        {base:{x:ax+unit*3,y:ay}, top:{x:ax+unit*3,y:ay-unit*4}, lbl:'D', tlbl:'R'},
+        {base:{x:ax+unit*4,y:ay}, top:{x:ax+unit*4,y:ay-unit*(16/3)}, lbl:'E', tlbl:'S'},
+      ];
+
+      // Clamp tops to screen
+      pts.forEach(p=>{ if(p.top.y<60) p.top.y=60; });
+
+      const A={x:ax,y:ay};
+
+      // Draw baseline (ground)
+      ctx.beginPath();ctx.moveTo(ax-20,ay);ctx.lineTo(ax+unit*4.8,ay);
+      ctx.strokeStyle='rgba(120,130,180,.4)';ctx.lineWidth=2;ctx.stroke();
+
+      // Grid dots on baseline
+      for(let i=0;i<=4;i++){
+        ctx.beginPath();ctx.arc(ax+unit*i,ay,3,0,Math.PI*2);
+        ctx.fillStyle='rgba(120,130,180,.5)';ctx.fill();
+      }
+
+      // Draw hypotenuse lines from A to each top (these form the "ray")
+      // Also draw the main triangle outline per each perpendicular
+      const triCols=['rgba(0,240,255,.25)','rgba(0,240,255,.18)','rgba(0,240,255,.13)','rgba(0,240,255,.09)'];
+      pts.forEach((p,i)=>{
+        // Fill triangle ABP lightly
+        ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(p.base.x,p.base.y);ctx.lineTo(p.top.x,p.top.y);ctx.closePath();
+        ctx.fillStyle=triCols[i];ctx.fill();
+      });
+
+      // Draw hypotenuse (main ray) from A through all tops
+      ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(pts[3].top.x,pts[3].top.y);
+      ctx.strokeStyle='#00f0ff';ctx.lineWidth=2.5;ctx.shadowColor='#00f0ff';ctx.shadowBlur=8;ctx.stroke();ctx.shadowBlur=0;
+
+      // Draw perpendiculars (opposite sides — magenta)
+      pts.forEach(p=>{
+        ctx.beginPath();ctx.moveTo(p.base.x,p.base.y);ctx.lineTo(p.top.x,p.top.y);
+        ctx.strokeStyle='#ff00ff';ctx.lineWidth=2.5;ctx.shadowColor='#ff00ff';ctx.shadowBlur=6;ctx.stroke();ctx.shadowBlur=0;
+        // Right angle marker
+        const sq=9;
+        ctx.beginPath();ctx.moveTo(p.base.x-sq,p.base.y);ctx.lineTo(p.base.x-sq,p.base.y-sq);ctx.lineTo(p.base.x,p.base.y-sq);
+        ctx.strokeStyle='rgba(200,210,255,.4)';ctx.lineWidth=1.5;ctx.stroke();
+      });
+
+      // Draw baseline segments (adjacent — amber)
+      pts.forEach((p,i)=>{
+        const from=i===0?A:pts[i-1].base;
+        ctx.beginPath();ctx.moveTo(from.x,from.y);ctx.lineTo(p.base.x,p.base.y);
+        ctx.strokeStyle='#ffaa00';ctx.lineWidth=2.5;ctx.shadowColor='#ffaa00';ctx.shadowBlur=5;ctx.stroke();ctx.shadowBlur=0;
+      });
+
+      // Angle arc at A
+      const ang=Math.atan2(pts[3].top.y-A.y,pts[3].top.x-A.x);
+      const baseAng=0;
+      ctx.beginPath();ctx.arc(A.x,A.y,32,ang,baseAng);
+      ctx.strokeStyle='#00ff88';ctx.lineWidth=2;ctx.shadowColor='#00ff88';ctx.shadowBlur=6;ctx.stroke();ctx.shadowBlur=0;
+      ctx.font='bold 13px Segoe UI';ctx.fillStyle='#00ff88';ctx.textAlign='left';ctx.textBaseline='middle';
+      ctx.fillText('θ',A.x+38,A.y-12);
+
+      // Labels at base points and tops
+      ctx.font='bold 13px Segoe UI';ctx.textAlign='center';ctx.textBaseline='top';
+      pts.forEach(p=>{
+        ctx.fillStyle='#ffaa00';ctx.fillText(p.lbl,p.base.x,p.base.y+6);
+        ctx.fillStyle='#ff00ff';ctx.fillText(p.tlbl,p.top.x+12,p.top.y-4);
+      });
+      ctx.fillStyle='#dde4ff';ctx.textBaseline='middle';ctx.fillText('A',A.x-16,A.y);
+
+      // Ratio labels near each hypotenuse segment midpoint
+      const ratioLabels=['BP/AP','CQ/AQ','DR/AR','ES/AS'];
+      const hypcols=['rgba(0,240,255,.9)','rgba(0,240,255,.8)','rgba(0,240,255,.7)','rgba(0,240,255,.6)'];
+      pts.forEach((p,i)=>{
+        const mx=(A.x+p.top.x)/2-18, my=(A.y+p.top.y)/2;
+        ctx.font='11px Segoe UI';ctx.fillStyle=hypcols[i];ctx.textAlign='right';ctx.textBaseline='middle';
+      });
+
+      // Drag handle
+      const h=getHandlePos();
+      ctx.beginPath();ctx.arc(h.x,h.y,11,0,Math.PI*2);
+      ctx.fillStyle=dragging?'#ff00ff':'rgba(255,0,255,.7)';ctx.shadowColor='#ff00ff';ctx.shadowBlur=14;ctx.fill();ctx.shadowBlur=0;
+      ctx.beginPath();ctx.arc(h.x,h.y,11,0,Math.PI*2);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
+
+      // Update ratio panels
+      const hyp=Math.sqrt((pts[0].top.x-A.x)**2+(pts[0].top.y-A.y)**2);
+      const opp=Math.abs(pts[0].base.y-pts[0].top.y);
+      const adj=Math.abs(pts[0].base.x-A.x);
+      const sinTheta=opp/hyp;
+      const cosTheta=adj/hyp;
+
+      for(let i=1;i<=4;i++){
+        const p=pts[i-1];
+        const h2=Math.sqrt((p.top.x-A.x)**2+(p.top.y-A.y)**2);
+        const op=Math.abs(p.base.y-p.top.y);
+        document.getElementById('r'+i).textContent=(op/h2).toFixed(3);
+      }
+      document.getElementById('sinval').textContent=sinTheta.toFixed(3);
+      document.getElementById('cosval').textContent=cosTheta.toFixed(3);
+
+      // Info box bottom-left
+      const bX=28,bY=H-120,bW=360,bH=90;
+      ctx.fillStyle='rgba(5,5,20,.88)';ctx.strokeStyle='rgba(0,240,255,.28)';ctx.lineWidth=1;
+      rrect(bX,bY,bW,bH,12);ctx.fill();ctx.stroke();
+      ctx.font='13px Segoe UI';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle='#ccd4ee';
+      ctx.fillText('All 4 triangles are similar (∠A is common, all have a right angle)',bX+14,bY+22);
+      ctx.fillStyle='#ff00ff';ctx.font='bold 13px Segoe UI';ctx.fillText('opposite',bX+14,bY+48);
+      ctx.fillStyle='#ccd4ee';ctx.font='13px Segoe UI';ctx.fillText(' ÷ ',bX+80,bY+48);
+      ctx.fillStyle='#00f0ff';ctx.font='bold 13px Segoe UI';ctx.fillText('hypotenuse',bX+98,bY+48);
+      ctx.fillStyle='#ccd4ee';ctx.font='13px Segoe UI';ctx.fillText(' = constant  →  this is sin θ',bX+178,bY+48);
+      ctx.fillStyle='#8899bb';ctx.font='12px Segoe UI';ctx.fillText('(Try dragging the handle — ratio never changes!)',bX+14,bY+72);
+    }
+
+    function animate(){requestAnimationFrame(animate);draw()}
+    animate();
+  </script>
+</body>
+</html>
